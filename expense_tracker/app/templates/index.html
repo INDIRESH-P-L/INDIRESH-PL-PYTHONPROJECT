@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker — Smart Finance Dashboard</title>
+    <meta name="description"
+        content="Track your income and expenses with a beautiful real-time dashboard. Manage your finances effortlessly." />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+
+<body>
+
+    <div class="page">
+
+        <!-- ── Sidebar ─────────────────────────────────────────────── -->
+        <aside class="sidebar" role="navigation" aria-label="Main navigation">
+            <div class="sidebar-brand">
+                <span class="brand-icon">💰</span>
+                <h1>Expense<br>Tracker</h1>
+                <p>Smart Finance Dashboard</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-label">Overview</div>
+                <div class="nav-item active" onclick="scrollTo({top:0,behavior:'smooth'})">
+                    <span class="nav-icon">📊</span> Dashboard
+                </div>
+
+                <div class="nav-label" style="margin-top:20px">Quick Add</div>
+                <div class="nav-item"
+                    onclick="document.getElementById('btn-income').click(); document.getElementById('tx-amount').focus()">
+                    <span class="nav-icon">📈</span> Add Income
+                </div>
+                <div class="nav-item"
+                    onclick="document.getElementById('btn-expense').click(); document.getElementById('tx-amount').focus()">
+                    <span class="nav-icon">💸</span> Add Expense
+                </div>
+
+                <div class="nav-label" style="margin-top:20px">Records</div>
+                <div class="nav-item" onclick="document.getElementById('tx-list').scrollIntoView({behavior:'smooth'})">
+                    <span class="nav-icon">📋</span> Transactions
+                </div>
+                <div class="nav-item"
+                    onclick="document.getElementById('cat-section').scrollIntoView({behavior:'smooth'})">
+                    <span class="nav-icon">🏷️</span> Categories
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div
+                    style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+                    <span style="color: var(--text-primary); font-weight: 600;">👤 {{ user['username'] }}</span>
+                    <a href="{{ url_for('auth.logout') }}"
+                        style="color: var(--red); text-decoration: none; font-size: 0.8rem; font-weight: 600;">Logout</a>
+                </div>
+                Built with Flask + SQLite<br />
+                <span id="sidebar-date"></span>
+            </div>
+        </aside>
+
+        <!-- ── Main ───────────────────────────────────────────────── -->
+        <div class="main">
+
+            <!-- Top bar -->
+            <header class="topbar">
+                <div class="topbar-title">📊 Dashboard</div>
+                <div class="topbar-right">
+                    <select class="month-select" id="month-select" aria-label="Filter by month">
+                        <option value="">All Time</option>
+                    </select>
+                    <div class="topbar-date" id="topbar-date">—</div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content">
+
+                <!-- ── Stat Cards ──────────────────────────────────────── -->
+                <section class="stats-grid" aria-label="Financial summary">
+
+                    <div class="stat-card balance">
+                        <div class="stat-blob"></div>
+                        <div class="stat-icon">⚖️</div>
+                        <div class="stat-label">Balance</div>
+                        <div class="stat-value" id="stat-balance">₹0.00</div>
+                        <div class="stat-sub">Income minus expenses</div>
+                    </div>
+
+                    <div class="stat-card income-card">
+                        <div class="stat-blob"></div>
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-label">Total Income</div>
+                        <div class="stat-value" id="stat-income">₹0.00</div>
+                        <div class="stat-sub">All-time earnings</div>
+                    </div>
+
+                    <div class="stat-card expense-card">
+                        <div class="stat-blob"></div>
+                        <div class="stat-icon">💸</div>
+                        <div class="stat-label">Total Expenses</div>
+                        <div class="stat-value" id="stat-expense">₹0.00</div>
+                        <div class="stat-sub">All-time spending</div>
+                    </div>
+
+                </section>
+
+                <!-- ── AI Insights ─────────────────────────────────────── -->
+                <section class="ai-insights-section" style="margin-top:-8px; margin-bottom: 8px;">
+                    <div class="card"
+                        style="border: 1px solid rgba(139, 92, 246, 0.4); box-shadow: 0 0 15px rgba(139, 92, 246, 0.1);">
+                        <div class="card-body"
+                            style="display: flex; gap: 16px; align-items: center; padding: 18px 24px;">
+                            <div class="ai-icon"
+                                style="font-size: 2rem; background: var(--purple-dim); padding: 10px; border-radius: 12px; height: 50px; width: 50px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                🤖
+                            </div>
+                            <div class="ai-text">
+                                <h3
+                                    style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; margin-bottom: 4px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                    Smart Assistant
+                                    <span
+                                        style="font-size: 0.65rem; background: var(--purple); color: white; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;">AI</span>
+                                </h3>
+                                <p id="ai-insight-text"
+                                    style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+                                    Analyzing your data...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ── Charts + Form ───────────────────────────────────── -->
+                <section class="dashboard-grid">
+
+                    <!-- Charts column -->
+                    <div class="charts-col">
+
+                        <!-- Trend bar chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">📅 Monthly Trend</div>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-wrap">
+                                    <canvas id="trend-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Donut chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">🍩 Expense Breakdown</div>
+                            </div>
+                            <div class="card-body" id="donut-section" style="min-height:190px">
+                                <canvas id="donut-chart" width="160" height="160" style="display:none"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Add Transaction Form -->
+                    <div class="card" id="add-form-card">
+                        <div class="card-header">
+                            <div class="card-title">➕ New Transaction</div>
+                        </div>
+                        <div class="card-body">
+                            <form id="tx-form" autocomplete="off" novalidate>
+                                <input type="hidden" id="tx-type-hidden" value="income" />
+
+                                <!-- Type toggle -->
+                                <div class="type-toggle" style="margin-bottom:18px">
+                                    <button type="button" class="type-btn active-income" id="btn-income">
+                                        📈 Income
+                                    </button>
+                                    <button type="button" class="type-btn" id="btn-expense">
+                                        💸 Expense
+                                    </button>
+                                </div>
+
+                                <!-- Category -->
+                                <div class="field" style="margin-bottom:13px">
+                                    <label for="tx-category">Category</label>
+                                    <select id="tx-category"></select>
+                                </div>
+
+                                <!-- Amount -->
+                                <div class="field" style="margin-bottom:13px">
+                                    <label for="tx-amount">Amount</label>
+                                    <div class="input-icon-wrap">
+                                        <span class="input-icon">₹</span>
+                                        <input type="number" id="tx-amount" placeholder="0.00" min="0.01" step="0.01"
+                                            required />
+                                    </div>
+                                </div>
+
+                                <!-- Note -->
+                                <div class="field" style="margin-bottom:13px">
+                                    <label for="tx-note">Note <span
+                                            style="color:var(--text-muted);font-weight:400;text-transform:none">(optional)</span></label>
+                                    <input type="text" id="tx-note" placeholder="Brief description…" maxlength="80" />
+                                </div>
+
+                                <!-- Date -->
+                                <div class="field" style="margin-bottom:18px">
+                                    <label for="tx-date">Date</label>
+                                    <input type="date" id="tx-date" required />
+                                </div>
+
+                                <button type="submit" class="btn-add" id="submit-btn">
+                                    Add Transaction
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- ── Transactions + Categories ──────────────────────── -->
+                <section class="bottom-grid">
+
+                    <!-- Transaction list -->
+                    <div class="card">
+                        <div class="card-header" style="padding-bottom:16px">
+                            <div class="card-title">📋 Transactions</div>
+                            <span class="tx-count-badge" id="tx-count">0 records</span>
+                        </div>
+                        <div class="card-body no-top">
+                            <!-- Toolbar -->
+                            <div class="tx-toolbar">
+                                <input type="text" class="tx-search" id="tx-search"
+                                    placeholder="🔍  Search by category or note…" aria-label="Search transactions" />
+                                <button class="filter-btn active-all" data-filter="all">All</button>
+                                <button class="filter-btn" data-filter="income">📈</button>
+                                <button class="filter-btn" data-filter="expense">💸</button>
+                            </div>
+
+                            <!-- List -->
+                            <div class="tx-list-wrap" id="tx-list" role="list" aria-label="Transaction list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Category breakdown -->
+                    <div class="card" id="cat-section" style="display:none">
+                        <div class="card-header">
+                            <div class="card-title">🏷️ Expense by Category</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="cat-list" id="cat-bars"></div>
+                        </div>
+                    </div>
+
+                </section>
+
+            </div><!-- /content -->
+        </div><!-- /main -->
+    </div><!-- /page -->
+
+    <!-- Toast -->
+    <div id="toast" role="alert" aria-live="polite"></div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+    <!-- App JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    <script>
+        // Date display
+        const now = new Date();
+        const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('topbar-date').textContent = now.toLocaleDateString('en-IN', opts);
+        document.getElementById('sidebar-date').textContent = now.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+    </script>
+
+</body>
+
+</html>

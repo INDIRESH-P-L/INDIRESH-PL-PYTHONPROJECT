@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Expense Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-card);
+            padding: 32px;
+            border-radius: var(--r-xl);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .auth-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-links {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .auth-links a {
+            color: var(--purple);
+            text-decoration: none;
+        }
+
+        .flash {
+            background: var(--red-dim);
+            color: var(--red);
+            padding: 10px;
+            border-radius: var(--r-sm);
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            text-align: center;
+            border: 1px solid rgba(255, 77, 109, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-card">
+        <h2 class="auth-title">Welcome Back 💰</h2>
+
+        {% for message in get_flashed_messages() %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+
+        <form method="post">
+            <div class="field" style="margin-bottom:16px">
+                <label for="username">Username</label>
+                <input type="text" name="username" id="username" required>
+            </div>
+            <div class="field" style="margin-bottom:24px">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password" required>
+            </div>
+            <button type="submit" class="btn-add">Log In</button>
+        </form>
+        <div class="auth-links">
+            Don't have an account? <a href="{{ url_for('auth.register') }}">Register</a>
+        </div>
+    </div>
+</body>
+
+</html>
