@@ -47,6 +47,13 @@ def add_transaction():
     except (TypeError, ValueError):
         return jsonify(error="Amount must be a positive number"), 400
 
+    # — Check if expense will exceed balance —
+    if tx_type == "expense":
+        summary = fetch_summary()
+        new_balance = summary["balance"] - amount
+        if new_balance < 0:
+            return jsonify(error=f"Insufficient balance. Current balance: {summary['balance']:.2f}, Expense amount: {amount:.2f}"), 400
+
     insert_transaction(tx_type, category, amount, note, date)
     return jsonify(success=True), 201
 
