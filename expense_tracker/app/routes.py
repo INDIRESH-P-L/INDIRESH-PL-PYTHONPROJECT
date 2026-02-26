@@ -1,3 +1,51 @@
+from flask import Blueprint, request, jsonify, render_template
+import sqlite3
+import os
+from datetime import datetime
+
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'expenses.db')
+expense_limits = {}
+
+chatbot = Blueprint("chatbot", __name__)
+
+@chatbot.route('/chatbot', methods=['POST'])
+def chatbot_route():
+    data = request.get_json()
+    msg = data.get('message', '').lower()
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    reply = ""
+    if 'set limit' in msg:
+        parts = msg.split()
+        if len(parts) >= 4:
+            category = parts[2]
+            try:
+                limit = float(parts[3])
+                expense_limits[category] = limit
+                reply = f"Limit for {category} set to {limit}."
+            except ValueError:
+                reply = "Please provide a valid number for limit."
+        else:
+            reply = "Usage: set limit <category> <amount>"
+    elif 'analytics' in msg or 'summary' in msg:
+        rows = conn.execute('SELECT category, SUM(amount) as total FROM transactions WHERE type="expense" GROUP BY category').fetchall()
+        reply = "Expense Analytics:\n"
+        for r in rows:
+            reply += f"{r['category']}: {r['total']}\n"
+    elif 'warn' in msg or 'check' in msg:
+        rows = conn.execute('SELECT category, SUM(amount) as total FROM transactions WHERE type="expense" GROUP BY category').fetchall()
+        warnings = []
+        for r in rows:
+            cat = r['category']
+            total = r['total']
+            limit = expense_limits.get(cat)
+            if limit and total > limit:
+                warnings.append(f"Warning: {cat} exceeded limit ({total}>{limit})!")
+        reply = '\n'.join(warnings) if warnings else "No limits exceeded."
+    else:
+        reply = "Ask for analytics, set limits, or check warnings."
+    conn.close()
+    return jsonify({'reply': reply})
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 from .models import (
