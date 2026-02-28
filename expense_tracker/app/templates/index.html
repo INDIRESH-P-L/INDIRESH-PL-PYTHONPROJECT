@@ -48,6 +48,11 @@
                     onclick="document.getElementById('cat-section').scrollIntoView({behavior:'smooth'})">
                     <span class="nav-icon">🏷️</span> Categories
                 </div>
+
+                <div class="nav-label" style="margin-top:20px">Budget</div>
+                <div class="nav-item" onclick="openLimitModal()">
+                    <span class="nav-icon">🎯</span> Set Limits
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -249,6 +254,8 @@
                     <div class="card" id="cat-section" style="display:none">
                         <div class="card-header">
                             <div class="card-title">🏷️ Expense by Category</div>
+                            <button class="btn-manage-limits" onclick="openLimitModal()" title="Manage Limits">🎯
+                                Manage</button>
                         </div>
                         <div class="card-body">
                             <div class="cat-list" id="cat-bars"></div>
@@ -261,14 +268,42 @@
         </div><!-- /main -->
     </div><!-- /page -->
 
+    <!-- Chatbot Toggle Button -->
+    <button id="chatbot-toggle" title="Open Finance AI" aria-label="Open Finance AI">
+        <span>🤖</span>
+    </button>
+
+    {% include 'chatbot.html' %}
+
     <!-- Toast -->
     <div id="toast" role="alert" aria-live="polite"></div>
+
+    <!-- Limit Modal -->
+    <div id="limit-modal" class="modal">
+        <div class="modal-content card">
+            <div class="card-header">
+                <div class="card-title">🎯 Set Expense Limits</div>
+                <button class="modal-close" onclick="closeLimitModal()">✕</button>
+            </div>
+            <div class="card-body">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+                    Set monthly spending limits for each category. Your personal assistant will warn you if you're close
+                    to exceeding them.
+                </p>
+                <div id="limit-list" class="limit-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
     <!-- App JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    {% include 'chatbot.html' %}
 
     <script>
         // Date display

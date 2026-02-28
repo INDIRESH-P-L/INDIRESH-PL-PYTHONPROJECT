@@ -18,8 +18,6 @@ def create_app(config_name="default"):
     from .auth import auth
     app.register_blueprint(auth)
     app.register_blueprint(api)
-    from .routes import chatbot
-    app.register_blueprint(chatbot)
 
     # ── Page Routes ───────────────────────────────────────────────────────────
     from .auth import login_required

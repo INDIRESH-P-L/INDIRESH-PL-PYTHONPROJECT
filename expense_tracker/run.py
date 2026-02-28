@@ -11,5 +11,5 @@ app = create_app("development")
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     print(f"\n  Expense Tracker  ->  http://127.0.0.1:{port}\n")
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=port)
+    # Disable reloader on Windows to prevent random crashes during development
+    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)

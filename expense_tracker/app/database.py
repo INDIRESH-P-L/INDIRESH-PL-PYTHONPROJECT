@@ -42,6 +42,25 @@ def init_db(app):
                 FOREIGN KEY (user_id) REFERENCES users (id)
             );
 
+            CREATE TABLE IF NOT EXISTS limits (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id        INTEGER NOT NULL,
+                category       TEXT    NOT NULL,
+                monthly_limit  REAL    NOT NULL CHECK(monthly_limit > 0),
+                UNIQUE(user_id, category),
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            );
+
+            CREATE TABLE IF NOT EXISTS ai_memory (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id      INTEGER NOT NULL,
+                key          TEXT    NOT NULL, -- 'instruction', 'goal', 'preference'
+                content      TEXT    NOT NULL,
+                created_at   TEXT    DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, key, content),
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id);
             CREATE INDEX IF NOT EXISTS idx_tx_type ON transactions(type);
             CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date);

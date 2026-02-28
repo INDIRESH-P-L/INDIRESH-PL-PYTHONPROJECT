@@ -1,5 +1,6 @@
 from .database import get_db
 from flask import g
+from datetime import datetime
 
 
 # ── Query helpers ──────────────────────────────────────────────────────────────
@@ -103,3 +104,86 @@ def fetch_available_months():
         "SELECT DISTINCT strftime('%Y-%m', date) AS m FROM transactions WHERE user_id = ? ORDER BY m DESC", (user_id,)
     ).fetchall()
     return [r["m"] for r in rows]
+
+
+def set_limit(category, limit):
+    db = get_db()
+    user_id = g.user["id"]
+    db.execute(
+        """INSERT INTO limits (user_id, category, monthly_limit) VALUES (?, ?, ?)
+           ON CONFLICT(user_id, category) DO UPDATE SET monthly_limit=excluded.monthly_limit""",
+        (user_id, category, limit)
+    )
+    db.commit()
+
+
+def fetch_limits():
+    db = get_db()
+    user_id = g.user["id"]
+    rows = db.execute("SELECT category, monthly_limit FROM limits WHERE user_id = ?", (user_id,)).fetchall()
+    return {r["category"]: r["monthly_limit"] for r in rows}
+
+
+def check_category_limit_exceeded(category, month=None):
+    if not month:
+        month = datetime.now().strftime("%Y-%m")
+    
+    db = get_db()
+    user_id = g.user["id"]
+    
+    # Get limit
+    limit_row = db.execute(
+        "SELECT monthly_limit FROM limits WHERE user_id = ? AND category = ?", 
+        (user_id, category)
+    ).fetchone()
+    
+    if not limit_row:
+        return None  # No limit set
+    
+    limit = limit_row["monthly_limit"]
+    
+    # Get total spent this month in this category
+    spent_row = db.execute(
+        """SELECT COALESCE(SUM(amount), 0) as total 
+           FROM transactions 
+           WHERE user_id = ? AND category = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?""",
+        (user_id, category, month)
+    ).fetchone()
+    
+    total_spent = spent_row["total"]
+    
+    if total_spent > limit:
+        return {"category": category, "limit": limit, "spent": total_spent, "exceeded_by": total_spent - limit}
+    
+    return None
+
+
+def store_ai_memory(key, content):
+    db = get_db()
+    user_id = g.user["id"]
+    db.execute(
+        "INSERT OR REPLACE INTO ai_memory (user_id, key, content) VALUES (?, ?, ?)",
+        (user_id, key, content)
+    )
+    db.commit()
+
+
+def fetch_ai_memory(key=None):
+    db = get_db()
+    user_id = g.user["id"]
+    sql = "SELECT key, content FROM ai_memory WHERE user_id = ?"
+    params = [user_id]
+    if key:
+        sql += " AND key = ?"
+        params.append(key)
+    
+    rows = db.execute(sql, params).fetchall()
+    if key:
+        return [r["content"] for r in rows]
+    
+    result = {}
+    for r in rows:
+        if r["key"] not in result:
+            result[r["key"]] = []
+        result[r["key"]].append(r["content"])
+    return result

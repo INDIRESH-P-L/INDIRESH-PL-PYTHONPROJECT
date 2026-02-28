@@ -817,6 +817,179 @@ body {
     border-radius: 4px;
 }
 
+/* ───────── MODAL & LIMIT STYLES ───────── */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    animation: modalPop 0.3s var(--ease) both;
+}
+
+@keyframes modalPop {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-close {
+    background: var(--bg-elevated);
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+    background: var(--border-strong);
+}
+
+.limit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    max-height: 50vh;
+    padding-right: 8px;
+}
+
+.limit-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.limit-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.limit-item-cat {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.limit-item-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    padding: 6px 10px;
+    border-radius: 8px;
+    width: 130px;
+}
+
+.limit-item-input-wrap span {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.limit-item-input-wrap input {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    width: 100%;
+    outline: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.btn-save-limit {
+    background: var(--purple-dim);
+    border: 1px solid var(--purple);
+    color: var(--purple);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-save-limit:hover {
+    background: var(--purple);
+    color: white;
+}
+
+.btn-manage-limits {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.btn-manage-limits:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+}
+
+/* Limit Indicators in Category Bars */
+.cat-row-limit {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.cat-track.limit-set {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    height: 8px;
+}
+
+.cat-fill.over-limit {
+    background: var(--red) !important;
+    box-shadow: 0 0 10px rgba(255, 77, 109, 0.4);
+}
+
+.cat-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.4);
+    z-index: 10;
+}
+
+/* Chatbot styles now in chatbot.html template */
+
 .tx-list-wrap::-webkit-scrollbar-track {
     background: transparent;
 }

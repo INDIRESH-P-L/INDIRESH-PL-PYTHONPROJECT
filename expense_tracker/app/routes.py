@@ -1,52 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
-import sqlite3
-import os
-from datetime import datetime
-
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'expenses.db')
-expense_limits = {}
-
-chatbot = Blueprint("chatbot", __name__)
-
-@chatbot.route('/chatbot', methods=['POST'])
-def chatbot_route():
-    data = request.get_json()
-    msg = data.get('message', '').lower()
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    reply = ""
-    if 'set limit' in msg:
-        parts = msg.split()
-        if len(parts) >= 4:
-            category = parts[2]
-            try:
-                limit = float(parts[3])
-                expense_limits[category] = limit
-                reply = f"Limit for {category} set to {limit}."
-            except ValueError:
-                reply = "Please provide a valid number for limit."
-        else:
-            reply = "Usage: set limit <category> <amount>"
-    elif 'analytics' in msg or 'summary' in msg:
-        rows = conn.execute('SELECT category, SUM(amount) as total FROM transactions WHERE type="expense" GROUP BY category').fetchall()
-        reply = "Expense Analytics:\n"
-        for r in rows:
-            reply += f"{r['category']}: {r['total']}\n"
-    elif 'warn' in msg or 'check' in msg:
-        rows = conn.execute('SELECT category, SUM(amount) as total FROM transactions WHERE type="expense" GROUP BY category').fetchall()
-        warnings = []
-        for r in rows:
-            cat = r['category']
-            total = r['total']
-            limit = expense_limits.get(cat)
-            if limit and total > limit:
-                warnings.append(f"Warning: {cat} exceeded limit ({total}>{limit})!")
-        reply = '\n'.join(warnings) if warnings else "No limits exceeded."
-    else:
-        reply = "Ask for analytics, set limits, or check warnings."
-    conn.close()
-    return jsonify({'reply': reply})
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request, jsonify, render_template, g
 from datetime import datetime
 from .models import (
     fetch_all_transactions,
@@ -54,15 +6,28 @@ from .models import (
     insert_transaction,
     delete_transaction,
     fetch_available_months,
+    check_category_limit_exceeded,
+    set_limit,
+    fetch_limits,
 )
+from .ai_agent import handle_chat, get_ai_insights
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
 @api.before_request
 def require_login():
-    from flask import g, jsonify
     if g.user is None:
         return jsonify(error="Unauthorized"), 401
+
+@api.post("/chat")
+def chat():
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "")
+    if not message:
+        return jsonify(error="Message is required"), 400
+    
+    reply = handle_chat(message)
+    return jsonify(reply=reply)
 
 # ── Transactions ───────────────────────────────────────────────────────────────
 
@@ -103,7 +68,15 @@ def add_transaction():
             return jsonify(error=f"Insufficient balance. Current balance: {summary['balance']:.2f}, Expense amount: {amount:.2f}"), 400
 
     insert_transaction(tx_type, category, amount, note, date)
-    return jsonify(success=True), 201
+    
+    # — Check category limit —
+    warning = None
+    if tx_type == "expense":
+        violation = check_category_limit_exceeded(category)
+        if violation:
+            warning = f"⚠️ Limit exceeded for {category}! Spent: ₹{violation['spent']}, Limit: ₹{violation['limit']}."
+
+    return jsonify(success=True, warning=warning), 201
 
 
 @api.delete("/transactions/<int:tx_id>")
@@ -132,3 +105,27 @@ def ai_insights():
 @api.get("/months")
 def get_months():
     return jsonify(fetch_available_months())
+
+# ── Limits ────────────────────────────────────────────────────────────────────
+
+@api.get("/limits")
+def get_api_limits():
+    return jsonify(fetch_limits())
+
+
+@api.post("/limits")
+def set_api_limit():
+    data = request.get_json(silent=True) or {}
+    category = data.get("category")
+    try:
+        limit = float(data.get("limit", 0))
+        if limit <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify(error="Limit must be a positive number"), 400
+
+    if not category:
+        return jsonify(error="Category is required"), 400
+
+    set_limit(category, limit)
+    return jsonify(success=True)

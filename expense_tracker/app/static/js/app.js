@@ -46,6 +46,7 @@ const state = {
     search: '',
     transactions: [],
     summary: { income: 0, expense: 0, balance: 0, categories: [], trend: [] },
+    limits: {},
 };
 
 // ── Chart instances ────────────────────────────────────────────────────────────
@@ -94,6 +95,11 @@ function bindEvents() {
         state.month = e.target.value;
         await refreshAll();
     });
+
+    // Close modal on click outside
+    window.onclick = e => {
+        if (e.target === $('limit-modal')) closeLimitModal();
+    };
 }
 
 // ── Type switch ────────────────────────────────────────────────────────────────
@@ -136,15 +142,17 @@ async function loadMonths() {
 
 // ── Refresh all data ───────────────────────────────────────────────────────────
 async function refreshAll() {
-    const [txs, summary, aiInsights] = await Promise.all([
+    const [txs, summary, aiInsights, limits] = await Promise.all([
         api(`/api/transactions${state.month ? `?month=${state.month}` : ''}`, {}, []),
         api(`/api/summary${state.month ? `?month=${state.month}` : ''}`, {},
             { income: 0, expense: 0, balance: 0, categories: [], trend: [] }),
         api(`/api/ai_insights${state.month ? `?month=${state.month}` : ''}`, {}, { insight: "Unable to load AI insights.", source: "" }),
+        api('/api/limits', {}, {}),
     ]);
 
     // Guard: ensure data shapes are correct before rendering
     state.transactions = Array.isArray(txs) ? txs : [];
+    state.limits = limits || {};
     state.summary = {
         income: typeof summary.income === 'number' ? summary.income : 0,
         expense: typeof summary.expense === 'number' ? summary.expense : 0,
@@ -295,7 +303,15 @@ async function handleSubmit(e) {
     });
 
     if (res.success) {
-        toast('Transaction added!', 'success');
+        if (res.warning) {
+            toast(res.warning, 'error'); // Use error style for warnings
+            // Also append to chatbot if it exists
+            if (window.appendMessage) {
+                window.appendMessage(res.warning, 'bot');
+            }
+        } else {
+            toast('Transaction added!', 'success');
+        }
         $('tx-amount').value = '';
         $('tx-note').value = '';
         state.month = '';
@@ -452,18 +468,81 @@ function renderCatBars() {
     wrap.style.display = '';
 
     const max = cats[0].total;
-    el.innerHTML = cats.slice(0, 7).map(c => `
-    <div class="cat-row">
-      <div class="cat-row-top">
-        <span class="cat-row-name">
-          ${CAT_ICON[c.category] || '💡'} ${c.category}
-        </span>
-        <span class="cat-row-amt" style="color:${CAT_COLOR[c.category] || '#ff4d6d'}">${fmt(c.total)}</span>
-      </div>
-      <div class="cat-track">
-        <div class="cat-fill" style="width:${((c.total / max) * 100).toFixed(1)}%; background:${CAT_COLOR[c.category] || '#ff4d6d'}"></div>
-      </div>
-    </div>`).join('');
+    el.innerHTML = cats.slice(0, 10).map(c => {
+        const limit = state.limits[c.category];
+        const pct = limit ? (c.total / limit) * 100 : (c.total / max) * 100;
+        const isOver = limit && c.total > limit;
+
+        return `
+        <div class="cat-row">
+          <div class="cat-row-top">
+            <span class="cat-row-name">
+              ${CAT_ICON[c.category] || '💡'} ${c.category}
+              ${limit ? `<span class="cat-row-limit">/ Limit: ${fmt(limit)}</span>` : ''}
+            </span>
+            <span class="cat-row-amt" style="color:${isOver ? 'var(--red)' : (CAT_COLOR[c.category] || '#ff4d6d')}">${fmt(c.total)}</span>
+          </div>
+          <div class="cat-track ${limit ? 'limit-set' : ''}" style="position:relative">
+            <div class="cat-fill ${isOver ? 'over-limit' : ''}" 
+                 style="width:${Math.min(pct, 100).toFixed(1)}%; background:${CAT_COLOR[c.category] || '#ff4d6d'}">
+            </div>
+            ${limit && pct < 100 ? `<div class="cat-marker" style="left:${Math.min(pct, 100).toFixed(1)}%"></div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Limit Modal ──────────────────────────────────────────────────────────────
+function openLimitModal() {
+    renderLimitList();
+    $('limit-modal').classList.add('active');
+}
+
+function closeLimitModal() {
+    $('limit-modal').classList.remove('active');
+}
+
+function renderLimitList() {
+    const listEl = $('limit-list');
+    listEl.innerHTML = CATEGORIES.expense.map(c => {
+        const currentLimit = state.limits[c.value] || '';
+        return `
+        <div class="limit-item">
+            <div class="limit-item-info">
+                <span>${CAT_ICON[c.value]}</span>
+                <span class="limit-item-cat">${c.value}</span>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div class="limit-item-input-wrap">
+                    <span>₹</span>
+                    <input type="number" id="limit-input-${c.value}" value="${currentLimit}" placeholder="No limit" min="0" step="100">
+                </div>
+                <button class="btn-save-limit" onclick="saveLimit('${c.value}')">Set</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function saveLimit(category) {
+    const val = $(`limit-input-${category}`).value;
+    if (!val || parseFloat(val) <= 0) {
+        toast('Please enter a valid limit', 'error');
+        return;
+    }
+
+    const res = await api('/api/limits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, limit: val }),
+    });
+
+    if (res.success) {
+        toast(`Limit set for ${category}`, 'success');
+        await refreshAll();
+        renderLimitList(); // Refresh modal list
+    } else {
+        toast(res.error || 'Failed to set limit', 'error');
+    }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
