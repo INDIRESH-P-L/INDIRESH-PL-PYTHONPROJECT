@@ -51,7 +51,7 @@
             margin-bottom: 20px;
             font-size: 0.85rem;
             text-align: center;
-            border: 1px solid rgba(255, 77, 109, 0.3);
+            border: 1px solid rgba(244, 63, 94, 0.2);
         }
     </style>
 </head>
@@ -73,8 +73,7 @@
                 <label for="password">Password</label>
                 <input type="password" name="password" id="password" required>
             </div>
-            <button type="submit" class="btn-add"
-                style="background:var(--grad-main); box-shadow:0 4px 20px rgba(16, 185, 129, 0.4);">Register</button>
+            <button type="submit" class="btn-add">Register</button>
         </form>
         <div class="auth-links">
             Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a><br><br>

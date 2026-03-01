@@ -13,18 +13,19 @@
         rel="stylesheet">
     <style>
         :root {
-            --accent-primary: #10b981;
-            /* Emerald 500 */
-            --accent-secondary: #3b82f6;
-            /* Blue 500 */
-            --deep-space: #0f172a;
-            /* Slate 900 */
+            --accent-primary: #06b6d4;
+            /* Cyan 500 */
+            --accent-secondary: #6366f1;
+            /* Indigo 500 */
+            --deep-space: #f8fafc;
+            /* Slate 50 */
         }
 
         body {
             background: var(--deep-space);
             overflow-x: hidden;
-            color: #fff;
+            color: #0f172a;
+            /* Slate 900 */
             font-family: 'Inter', sans-serif;
             margin: 0;
         }
@@ -34,14 +35,14 @@
             position: fixed;
             inset: 0;
             z-index: -2;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            background: radial-gradient(circle at center, #ffffff 0%, #f1f5f9 100%);
         }
 
         .nebula-glow {
             position: fixed;
             width: 100vw;
             height: 100vw;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
             top: -50vw;
             right: -50vw;
             z-index: -1;
@@ -96,15 +97,15 @@
             width: 90%;
             max-width: 1300px;
             padding: 16px 40px;
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(15, 23, 42, 0.05);
             border-radius: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 1000;
-            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
         }
 
         .logo-txt {
@@ -166,19 +167,20 @@
             font-size: 1.6rem;
             font-weight: 800;
             border-radius: 20px;
-            background: #fff;
-            color: #000;
+            background: #0f172a;
+            /* Slate 900 */
+            color: #fff;
             text-decoration: none;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: inline-block;
-            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.1);
         }
 
         .btn-action:hover {
             transform: scale(1.05) translateY(-5px);
             background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             color: #fff;
-            box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 20px 60px rgba(6, 182, 212, 0.3);
         }
 
         .hero-visual-wrap {
@@ -192,7 +194,7 @@
             width: 120%;
             height: auto;
             border-radius: 50px;
-            box-shadow: 0 0 120px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 120px rgba(6, 182, 212, 0.1);
             transform: perspective(1000px) rotateY(-10deg) rotateX(5deg);
             animation: orbital 10s infinite ease-in-out;
         }
@@ -234,21 +236,22 @@
         }
 
         .feat-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.05);
             padding: 60px 40px;
             border-radius: 40px;
             transition: all 0.5s var(--ease);
             position: relative;
             backdrop-filter: blur(10px);
             text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
         }
 
         .feat-card:hover {
-            background: rgba(255, 255, 255, 0.04);
-            border-color: var(--accent-secondary);
+            background: #ffffff;
+            border-color: var(--accent-primary);
             transform: translateY(-20px);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.08);
         }
 
         .feat-icon-img {
@@ -439,7 +442,7 @@
 
         function draw() {
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = '#94a3b8'; // Slate 400
             stars.forEach(s => {
                 ctx.globalAlpha = Math.random() * 0.5 + 0.5;
                 ctx.beginPath();

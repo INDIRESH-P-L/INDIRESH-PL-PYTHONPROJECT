@@ -5,29 +5,29 @@
 // ── Category data ──────────────────────────────────────────────────────────────
 const CATEGORIES = {
     income: [
-        { value: 'Salary', label: '💼 Salary', color: '#10b981' }, // Emerald
-        { value: 'Freelance', label: '🔧 Freelance', color: '#3b82f6' }, // Blue
-        { value: 'Investment', label: '📈 Investment', color: '#0ea5e9' }, // Sky
-        { value: 'Gift', label: '🎁 Gift', color: '#8b5cf6' }, // Violet
-        { value: 'Rent Income', label: '🏠 Rent Income', color: '#059669' }, // Emerald Dark
+        { value: 'Salary', label: '💼 Salary', color: '#0ea5e9' }, // Sky 500
+        { value: 'Freelance', label: '🔧 Freelance', color: '#2dd4bf' }, // Teal 400
+        { value: 'Investment', label: '📈 Investment', color: '#6366f1' }, // Indigo 500
+        { value: 'Gift', label: '🎁 Gift', color: '#ec4899' }, // Pink 500
+        { value: 'Rent Income', label: '🏠 Rent Income', color: '#10b981' }, // Emerald 500
         { value: 'Business', label: '🤝 Business', color: '#f59e0b' },
         { value: 'Bonus', label: '🏆 Bonus', color: '#fbbf24' },
-        { value: 'Other', label: '💡 Other', color: '#94a3b8' }, // Slate
+        { value: 'Other', label: '💡 Other', color: '#64748b' }, // Slate 500
     ],
     expense: [
-        { value: 'Groceries', label: '🛒 Groceries', color: '#ef4444' }, // Red
-        { value: 'Food & Dining', label: '🍽️ Food & Dining', color: '#f97316' }, // Orange
-        { value: 'Transport', label: '🚌 Transport', color: '#eab308' }, // Yellow
-        { value: 'Rent', label: '🏠 Rent', color: '#6366f1' }, // Indigo
-        { value: 'Utilities', label: '💡 Utilities', color: '#3b82f6' }, // Blue
-        { value: 'Health', label: '🏥 Health', color: '#22c55e' }, // Green
-        { value: 'Entertainment', label: '🎬 Entertainment', color: '#ec4899' }, // Pink
-        { value: 'Education', label: '📚 Education', color: '#8b5cf6' }, // Violet
-        { value: 'Shopping', label: '👗 Shopping', color: '#f43f5e' }, // Rose
-        { value: 'Travel', label: '✈️ Travel', color: '#0ea5e9' }, // Sky
-        { value: 'EMI / Loan', label: '🏦 EMI / Loan', color: '#6366f1' }, // Indigo
-        { value: 'Subscriptions', label: '📺 Subscriptions', color: '#10b981' }, // Emerald
-        { value: 'Other', label: '💡 Other', color: '#94a3b8' }, // Slate
+        { value: 'Groceries', label: '🛒 Groceries', color: '#f43f5e' }, // Rose 500
+        { value: 'Food & Dining', label: '🍽️ Food & Dining', color: '#f97316' }, // Orange 500
+        { value: 'Transport', label: '🚌 Transport', color: '#eab308' }, // Yellow 500
+        { value: 'Rent', label: '🏠 Rent', color: '#6366f1' }, // Indigo 500
+        { value: 'Utilities', label: '💡 Utilities', color: '#0ea5e9' }, // Sky 500
+        { value: 'Health', label: '🏥 Health', color: '#10b981' }, // Emerald 500
+        { value: 'Entertainment', label: '🎬 Entertainment', color: '#d946ef' }, // Fuchsia 500
+        { value: 'Education', label: '📚 Education', color: '#8b5cf6' }, // Violet 500
+        { value: 'Shopping', label: '👗 Shopping', color: '#f43f5e' }, // Rose 500
+        { value: 'Travel', label: '✈️ Travel', color: '#06b6d4' }, // Cyan 500
+        { value: 'EMI / Loan', label: '🏦 EMI / Loan', color: '#4f46e5' }, // Indigo 600
+        { value: 'Subscriptions', label: '📺 Subscriptions', color: '#2dd4bf' }, // Teal 400
+        { value: 'Other', label: '💡 Other', color: '#64748b' }, // Slate 500
     ],
 };
 
@@ -419,14 +419,14 @@ function renderTrend() {
                 {
                     label: 'Income',
                     data: trend.map(t => t.income),
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)', // Emerald
+                    backgroundColor: 'rgba(6, 182, 212, 0.7)', // Cyan 500
                     borderRadius: 6,
                     borderSkipped: false,
                 },
                 {
                     label: 'Expense',
                     data: trend.map(t => t.expense),
-                    backgroundColor: 'rgba(239, 68, 68, 0.7)', // Red
+                    backgroundColor: 'rgba(244, 63, 94, 0.7)', // Rose 500
                     borderRadius: 6,
                     borderSkipped: false,
                 },
@@ -444,10 +444,10 @@ function renderTrend() {
                 },
             },
             scales: {
-                x: { ticks: { color: '#8b93b8', font: { size: 11 } }, grid: { display: false } },
+                x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { display: false } },
                 y: {
-                    ticks: { color: '#8b93b8', font: { size: 11 }, callback: v => fmtShort(v) },
-                    grid: { color: 'rgba(255,255,255,.05)' },
+                    ticks: { color: '#64748b', font: { size: 11 }, callback: v => fmtShort(v) },
+                    grid: { color: 'rgba(15, 23, 42, 0.05)' },
                     border: { dash: [4, 4] },
                 },
             },
