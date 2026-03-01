@@ -23,6 +23,10 @@ def create_app(config_name="default"):
     from .auth import login_required
 
     @app.route("/")
+    def landing():
+        return render_template("landing.html")
+
+    @app.route("/dashboard")
     @login_required
     def index():
         from flask import g

@@ -5,29 +5,29 @@
 // ── Category data ──────────────────────────────────────────────────────────────
 const CATEGORIES = {
     income: [
-        { value: 'Salary', label: '💼 Salary', color: '#00e5a0' },
-        { value: 'Freelance', label: '🔧 Freelance', color: '#06b6d4' },
-        { value: 'Investment', label: '📈 Investment', color: '#3b82f6' },
-        { value: 'Gift', label: '🎁 Gift', color: '#a78bfa' },
-        { value: 'Rent Income', label: '🏠 Rent Income', color: '#34d399' },
+        { value: 'Salary', label: '💼 Salary', color: '#10b981' }, // Emerald
+        { value: 'Freelance', label: '🔧 Freelance', color: '#3b82f6' }, // Blue
+        { value: 'Investment', label: '📈 Investment', color: '#0ea5e9' }, // Sky
+        { value: 'Gift', label: '🎁 Gift', color: '#8b5cf6' }, // Violet
+        { value: 'Rent Income', label: '🏠 Rent Income', color: '#059669' }, // Emerald Dark
         { value: 'Business', label: '🤝 Business', color: '#f59e0b' },
         { value: 'Bonus', label: '🏆 Bonus', color: '#fbbf24' },
-        { value: 'Other', label: '💡 Other', color: '#8b93b8' },
+        { value: 'Other', label: '💡 Other', color: '#94a3b8' }, // Slate
     ],
     expense: [
-        { value: 'Groceries', label: '🛒 Groceries', color: '#f43f5e' },
-        { value: 'Food & Dining', label: '🍽️ Food & Dining', color: '#fb923c' },
-        { value: 'Transport', label: '🚌 Transport', color: '#facc15' },
-        { value: 'Rent', label: '🏠 Rent', color: '#e879f9' },
-        { value: 'Utilities', label: '💡 Utilities', color: '#60a5fa' },
-        { value: 'Health', label: '🏥 Health', color: '#4ade80' },
-        { value: 'Entertainment', label: '🎬 Entertainment', color: '#f472b6' },
-        { value: 'Education', label: '📚 Education', color: '#818cf8' },
-        { value: 'Shopping', label: '👗 Shopping', color: '#fb7185' },
-        { value: 'Travel', label: '✈️ Travel', color: '#38bdf8' },
-        { value: 'EMI / Loan', label: '🏦 EMI / Loan', color: '#a78bfa' },
-        { value: 'Subscriptions', label: '📺 Subscriptions', color: '#34d399' },
-        { value: 'Other', label: '💡 Other', color: '#8b93b8' },
+        { value: 'Groceries', label: '🛒 Groceries', color: '#ef4444' }, // Red
+        { value: 'Food & Dining', label: '🍽️ Food & Dining', color: '#f97316' }, // Orange
+        { value: 'Transport', label: '🚌 Transport', color: '#eab308' }, // Yellow
+        { value: 'Rent', label: '🏠 Rent', color: '#6366f1' }, // Indigo
+        { value: 'Utilities', label: '💡 Utilities', color: '#3b82f6' }, // Blue
+        { value: 'Health', label: '🏥 Health', color: '#22c55e' }, // Green
+        { value: 'Entertainment', label: '🎬 Entertainment', color: '#ec4899' }, // Pink
+        { value: 'Education', label: '📚 Education', color: '#8b5cf6' }, // Violet
+        { value: 'Shopping', label: '👗 Shopping', color: '#f43f5e' }, // Rose
+        { value: 'Travel', label: '✈️ Travel', color: '#0ea5e9' }, // Sky
+        { value: 'EMI / Loan', label: '🏦 EMI / Loan', color: '#6366f1' }, // Indigo
+        { value: 'Subscriptions', label: '📺 Subscriptions', color: '#10b981' }, // Emerald
+        { value: 'Other', label: '💡 Other', color: '#94a3b8' }, // Slate
     ],
 };
 
@@ -419,14 +419,14 @@ function renderTrend() {
                 {
                     label: 'Income',
                     data: trend.map(t => t.income),
-                    backgroundColor: 'rgba(0,229,160,.7)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)', // Emerald
                     borderRadius: 6,
                     borderSkipped: false,
                 },
                 {
                     label: 'Expense',
                     data: trend.map(t => t.expense),
-                    backgroundColor: 'rgba(255,77,109,.7)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)', // Red
                     borderRadius: 6,
                     borderSkipped: false,
                 },

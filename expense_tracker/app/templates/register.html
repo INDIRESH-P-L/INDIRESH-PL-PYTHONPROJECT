@@ -74,10 +74,11 @@
                 <input type="password" name="password" id="password" required>
             </div>
             <button type="submit" class="btn-add"
-                style="background:var(--grad-income); box-shadow:0 4px 20px rgba(0, 229, 160, 0.4);">Register</button>
+                style="background:var(--grad-main); box-shadow:0 4px 20px rgba(16, 185, 129, 0.4);">Register</button>
         </form>
         <div class="auth-links">
-            Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a>
+            Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a><br><br>
+            <a href="{{ url_for('landing') }}" style="color: var(--text-muted); opacity: 0.6;">← Back to Home</a>
         </div>
     </div>
 </body>
