@@ -28,7 +28,9 @@ def init_db(app):
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
+                password TEXT,
+                google_id TEXT UNIQUE,
+                email TEXT UNIQUE
             );
 
             CREATE TABLE IF NOT EXISTS transactions (
@@ -65,4 +67,12 @@ def init_db(app):
             CREATE INDEX IF NOT EXISTS idx_tx_type ON transactions(type);
             CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date);
         """)
+        # Migration: Add Google columns if they don't exist
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN google_id TEXT UNIQUE")
+            db.execute("ALTER TABLE users ADD COLUMN email TEXT UNIQUE")
+        except sqlite3.OperationalError:
+            # Columns probably already exist
+            pass
+        
         db.commit()
