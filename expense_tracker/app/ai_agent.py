@@ -4,7 +4,8 @@ from datetime import datetime
 from .models import (
     fetch_summary, set_limit, fetch_limits, 
     check_category_limit_exceeded, fetch_all_transactions,
-    fetch_ai_memory, store_ai_memory
+    fetch_ai_memory, store_ai_memory, get_detailed_analytics,
+    get_expense_warnings
 )
 
 try:
@@ -16,26 +17,34 @@ except ImportError:
 def get_ai_insights(month=None):
     if not month:
         month = datetime.now().strftime("%Y-%m")
-        
-    summary = fetch_summary(month)
+    
+    # Get comprehensive analytics
+    try:
+        analytics = get_detailed_analytics(month)
+    except:
+        analytics = {"summary": fetch_summary(month)}
+    
+    summary = analytics.get("summary", {})
     income = summary.get("income", 0)
     expense = summary.get("expense", 0)
     balance = summary.get("balance", 0)
     categories = summary.get("categories", [])
     
-    # Check for limit violations
-    limits = fetch_limits()
-    limit_warnings = []
-    for cat_data in categories:
-        cat_name = cat_data["category"]
-        if cat_name in limits:
-            limit = limits[cat_name]
-            spent = cat_data["total"]
-            if spent > limit:
-                limit_warnings.append(f"⚠️ Limit Exceeded: You've spent ₹{spent} on {cat_name}, which is ₹{spent-limit} over your ₹{limit} limit!")
-            elif spent > limit * 0.8:
-                limit_warnings.append(f"⚠️ Budget Alert: You've spent ₹{spent} on {cat_name}, which is 80%+ of your ₹{limit} limit.")
-
+    # Get warnings
+    try:
+        warnings = get_expense_warnings()
+    except:
+        warnings = []
+    
+    # Spending velocity info
+    velocity = analytics.get("spending_velocity", {})
+    daily_avg = velocity.get("daily_average", 0)
+    days_elapsed = velocity.get("days_elapsed", 0)
+    projected = velocity.get("projected_expense", 0)
+    
+    # Build warning list
+    limit_warnings = [w["message"] for w in warnings if "message" in w]
+    
     # Try using Gemini if API key is present
     api_key = os.environ.get("GEMINI_API_KEY")
     if HAS_GENAI and api_key:
@@ -43,27 +52,46 @@ def get_ai_insights(month=None):
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # Enhanced Prompt with Memory
+            # Enhanced Prompt with Full Analytics Context
             memory = fetch_ai_memory()
             user_instructions = "; ".join(memory.get('instruction', [])) or "None"
             user_goals = "; ".join(memory.get('goal', [])) or "None"
             
+            # Format category spending
+            cat_breakdown = "\n".join([f"  - {c['category']}: ₹{c['total']:.2f}" for c in categories[:10]])
+            
             prompt = f"""
-            You are 'Finance-AI', a permanent financial co-pilot.
+            You are 'Finance-AI', a permanent financial co-pilot providing detailed analytics.
             Month: {month}
-            Stats: Income: ₹{income}, Expense: ₹{expense}, Balance: ₹{balance}
-            Spending: {', '.join([f"{c['category']}: ₹{c['total']}" for c in categories])}
-            Limit Alerts: {'; '.join(limit_warnings) if limit_warnings else 'None'}
             
-            Persistent Context:
+            FINANCIAL SUMMARY:
+            - Income: ₹{income:.2f}
+            - Expenses: ₹{expense:.2f}
+            - Balance: ₹{balance:.2f}
+            - Daily Average Spending: ₹{daily_avg:.2f}
+            - Days Elapsed: {days_elapsed}
+            - Projected Month-End Expense: ₹{projected:.2f}
+            
+            TOP SPENDING CATEGORIES:
+            {cat_breakdown}
+            
+            EXPENSE WARNINGS & ALERTS:
+            {chr(10).join(limit_warnings) if limit_warnings else 'No active warnings'}
+            
+            PERSISTENT CONTEXT:
             - User Goals: {user_goals}
-            - Style Preferences: {user_instructions}
+            - Behavioral Style: {user_instructions}
             
-            Instructions:
-            1. Analyze deviations from typical patterns.
-            2. If limits are hit, suggest specific budget cuts based on high-spend categories.
-            3. Reference the user's specific goals in your advice.
-            4. Keep the tone encouraging but firm on financial health.
+            PROVIDE ANALYSIS INCLUDING:
+            1. **Current Status**: Summarize financial health clearly
+            2. **Spending Pattern**: Analyze daily spending velocity and trends
+            3. **Category Analysis**: Identify top spending areas and opportunities to save
+            4. **Limit Status**: Detail any limit violations or warnings (🔴 EXCEEDED, 🟡 WARNING)
+            5. **Projections**: Will expenses exceed income? Projected surplus/deficit?
+            6. **Recommendations**: 3-5 specific, actionable suggestions for budget optimization
+            7. **Action Items**: What should user do RIGHT NOW if any limits are exceeded?
+            
+            Keep response concise but comprehensive. Use emojis for clarity. Bold key numbers.
             """
             
             response = model.generate_content(prompt)
@@ -71,21 +99,55 @@ def get_ai_insights(month=None):
         except Exception as e:
             print(f"Gemini API error: {e}")
             pass
-
-    # Rule-based fallback "AI"
-    insight = ""
-    if expense == 0 and income == 0:
-        insight = "No data for this month yet. Start tracking your transactions!"
-    elif expense > income * 0.9:
-        insight = f"⚠️ Warning: Your total expenses (₹{expense}) are dangerously close to or exceed your income (₹{income})."
-    elif expense > income * 0.7:
-        insight = f"You are spending a significant portion of your income. Balance is ₹{balance}."
-    else:
-        insight = f"Great job! You have saved ₹{balance} this month. Your spending is well under control."
     
-    if limit_warnings:
-        insight += "\n\n" + "\n".join(limit_warnings)
+    # Enhanced rule-based fallback "AI" with detailed analytics
+    insight = ""
+    
+    # Header
+    if balance < 0:
+        insight = f"🔴 **CRITICAL ALERT**: Your balance is **NEGATIVE (₹{abs(balance):.2f} deficit)**!\n\n"
+    elif balance < income * 0.1:
+        insight = f"🟡 **WARNING**: Low balance alert! Balance is only **₹{balance:.2f}**.\n\n"
+    else:
+        insight = f"✅ **Financial Status**: You have a balance of **₹{balance:.2f}**.\n\n"
+    
+    # Spending analysis
+    if days_elapsed > 0:
+        insight += f"📊 **Spending Analysis**:\n"
+        insight += f"  • Daily Average: ₹{daily_avg:.2f}/day\n"
+        insight += f"  • Days Remaining: {30 - days_elapsed} days\n"
+        insight += f"  • Projected Month-End: ₹{projected:.2f}\n"
         
+        if projected > income:
+            overspend = projected - income
+            insight += f"  • ⚠️ **PROJECTED OVERSPEND**: ₹{overspend:.2f}\n\n"
+        else:
+            saving = income - projected
+            insight += f"  • ✅ **Projected Savings**: ₹{saving:.2f}\n\n"
+    
+    # Expense breakdown
+    if categories:
+        insight += f"🏷️ **Top Spending Categories**:\n"
+        for i, c in enumerate(categories[:5], 1):
+            pct = (c['total'] / expense * 100) if expense > 0 else 0
+            insight += f"  {i}. {c['category']}: **₹{c['total']:.2f}** ({pct:.1f}%)\n"
+        insight += "\n"
+    
+    # Alerts and warnings
+    if limit_warnings:
+        insight += "⚠️ **ACTIVE ALERTS**:\n"
+        for warning in limit_warnings[:3]:  # Show top 3 warnings
+            insight += f"  • {warning}\n"
+        insight += "\n"
+    
+    # Recommendations
+    if expense > income * 0.9:
+        insight += "💡 **URGENT**: Your spending is dangerously close to your income. Reduce expenses immediately!\n"
+    elif expense > income * 0.75:
+        insight += "💡 **Recommendation**: Consider reducing discretionary spending in top categories.\n"
+    else:
+        insight += "💡 **Status**: Your spending is well-controlled. Continue monitoring!\n"
+    
     return {"insight": insight, "source": "Smart Assistant"}
 
 
@@ -165,8 +227,19 @@ def handle_chat(message):
                 # Fall through to step 3
 
         # 3. Rule-based fallbacks for when AI is offline or failed
-        if any(w in message_lower for w in ["analyze", "summary", "report", "stats"]):
-            return get_ai_insights()["insight"]
+        if any(w in message_lower for w in ["analyze", "summary", "report", "stats", "analytics"]):
+            insights = get_ai_insights()
+            warnings = get_expense_warnings()
+            
+            response = insights["insight"] + "\n\n"
+            
+            if warnings:
+                response += "🚨 **ACTIVE WARNINGS**:\n"
+                for w in warnings[:5]:
+                    if "message" in w:
+                        response += f"  • {w['message']}\n"
+            
+            return response
             
         if "limit" in message_lower or "budget" in message_lower:
             try:

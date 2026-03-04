@@ -9,6 +9,8 @@ from .models import (
     check_category_limit_exceeded,
     set_limit,
     fetch_limits,
+    get_detailed_analytics,
+    get_expense_warnings,
 )
 from .ai_agent import handle_chat, get_ai_insights
 
@@ -129,3 +131,28 @@ def set_api_limit():
 
     set_limit(category, limit)
     return jsonify(success=True)
+
+
+# ── Analytics ──────────────────────────────────────────────────────────────────
+
+@api.get("/analytics/detailed")
+def get_detailed_analytics_api():
+    """Get comprehensive spending analytics with daily/weekly breakdown."""
+    month = request.args.get("month")
+    try:
+        analytics = get_detailed_analytics(month=month)
+        return jsonify(analytics)
+    except Exception as e:
+        print(f"Analytics error: {e}")
+        return jsonify(error=str(e)), 500
+
+
+@api.get("/analytics/warnings")
+def get_warnings_api():
+    """Get all active expense warnings and alerts."""
+    try:
+        warnings = get_expense_warnings()
+        return jsonify(warnings=warnings)
+    except Exception as e:
+        print(f"Warnings error: {e}")
+        return jsonify(error=str(e)), 500

@@ -63,6 +63,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMonths();
     await refreshAll();
     bindEvents();
+
+    // Auto-refresh every 30 seconds for real-time analytics
+    setInterval(async () => {
+        await refreshAll();
+    }, 30000);
 });
 
 // ── Event wiring ───────────────────────────────────────────────────────────────
@@ -142,12 +147,14 @@ async function loadMonths() {
 
 // ── Refresh all data ───────────────────────────────────────────────────────────
 async function refreshAll() {
-    const [txs, summary, aiInsights, limits] = await Promise.all([
+    const [txs, summary, aiInsights, limits, analytics, warnings] = await Promise.all([
         api(`/api/transactions${state.month ? `?month=${state.month}` : ''}`, {}, []),
         api(`/api/summary${state.month ? `?month=${state.month}` : ''}`, {},
             { income: 0, expense: 0, balance: 0, categories: [], trend: [] }),
         api(`/api/ai_insights${state.month ? `?month=${state.month}` : ''}`, {}, { insight: "Unable to load AI insights.", source: "" }),
         api('/api/limits', {}, {}),
+        api(`/api/analytics/detailed${state.month ? `?month=${state.month}` : ''}`, {}, {}),
+        api('/api/analytics/warnings', {}, { warnings: [] }),
     ]);
 
     // Guard: ensure data shapes are correct before rendering
@@ -173,22 +180,40 @@ async function refreshAll() {
     renderTrend();
     renderCatBars();
 
-    // AI insight update
+    // Render analytics cards
+    renderAnalyticsCards();
+
+    // Store analytics and warnings for later use
+    state.analytics = analytics || {};
+    state.warnings = (warnings && warnings.warnings) || [];
+
+    // Display active warnings as toast alerts
+    if (state.warnings.length > 0) {
+        const criticalWarnings = state.warnings.filter(w => w.type === 'exceeded' || w.type === 'critical');
+        if (criticalWarnings.length > 0) {
+            const msg = criticalWarnings[0].message || "⚠️ Expense limit exceeded!";
+            toast(msg, 'error');
+        }
+    }
+
+    // AI insight update with enhanced analytics display
     const insightEl = $('ai-insight-text');
     if (insightEl && aiInsights.insight) {
-        // Highlighting warning logic (if 'Warning:' is in text, make it red-ish)
+        // Use HTML rendering for better formatting
         let text = aiInsights.insight;
-        if (text.includes('Warning:')) {
-            text = text.replace('Warning:', '<strong style="color:var(--red)">Warning:</strong>');
-            insightEl.style.color = "var(--text-primary)";
-        } else if (text.includes('Great job!')) {
-            text = text.replace('Great job!', '<strong style="color:var(--green)">Great job!</strong>');
-            insightEl.style.color = "var(--text-secondary)";
-        } else {
-            insightEl.style.color = "var(--text-secondary)";
-        }
+
+        // Replace common patterns with styled versions
+        text = text.replace(/🔴 \*\*CRITICAL(.*?)\*\*/g, '<strong style="color:var(--red)">🔴 CRITICAL$1</strong>');
+        text = text.replace(/🟡 \*\*WARNING(.*?)\*\*/g, '<strong style="color:#f59e0b">🟡 WARNING$1</strong>');
+        text = text.replace(/✅ \*\*STATUS(.*?)\*\*/g, '<strong style="color:var(--green)">✅ STATUS$1</strong>');
+        text = text.replace(/₹([\d,.]+)/g, '<strong style="color:var(--primary)">₹$1</strong>');
+        text = text.replace(/\n/g, '<br>');
+
         insightEl.innerHTML = text;
     }
+
+    // Render warnings badge if there are any
+    renderWarningsIndicator();
 
     await loadMonths();
 }
@@ -220,6 +245,63 @@ function animateValue(el, target) {
     requestAnimationFrame(step);
 }
 function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+// ── Analytics Cards ───────────────────────────────────────────────────────────-
+function renderAnalyticsCards() {
+    const analytics = state.analytics || {};
+    const velocity = analytics.spending_velocity || {};
+    const summary = analytics.summary || state.summary;
+
+    // Daily average
+    const dailyAvg = velocity.daily_average || 0;
+    animateValue($('daily-avg'), dailyAvg);
+
+    // Projected expense
+    const projected = velocity.projected_expense || 0;
+    animateValue($('projected-expense'), projected);
+
+    // Projection status
+    const income = summary.income || 0;
+    const statusEl = $('projection-status');
+    if (projected > income) {
+        const overspend = projected - income;
+        statusEl.textContent = `❌ Overspend: ₹${overspend.toFixed(2)}`;
+        statusEl.style.color = 'var(--red)';
+    } else {
+        const savings = income - projected;
+        statusEl.textContent = `✅ Projected savings: ₹${savings.toFixed(2)}`;
+        statusEl.style.color = 'var(--green)';
+    }
+
+    // Budget health indicator
+    const healthEl = $('budget-health');
+    const msgEl = $('health-message');
+
+    const balance = summary.balance || 0;
+    const expense = summary.expense || 0;
+
+    if (balance < 0) {
+        healthEl.textContent = '💔';
+        msgEl.textContent = 'Negative balance';
+        msgEl.style.color = 'var(--red)';
+    } else if (balance < income * 0.1) {
+        healthEl.textContent = '🟡';
+        msgEl.textContent = 'Low balance warning';
+        msgEl.style.color = '#f59e0b';
+    } else if (expense > income * 0.9) {
+        healthEl.textContent = '💛';
+        msgEl.textContent = 'High spending detected';
+        msgEl.style.color = '#eab308';
+    } else if (expense <= income * 0.5) {
+        healthEl.textContent = '💚';
+        msgEl.textContent = 'Excellent spending control';
+        msgEl.style.color = 'var(--green)';
+    } else {
+        healthEl.textContent = '💙';
+        msgEl.textContent = 'Spending under control';
+        msgEl.style.color = 'var(--primary)';
+    }
+}
 
 // ── Transaction list ───────────────────────────────────────────────────────────
 function renderTxList() {
@@ -460,6 +542,7 @@ function renderCatBars() {
     const cats = state.summary.categories;
     const el = $('cat-bars');
     const wrap = $('cat-section');
+    const limits = state.limits || {};
 
     if (!cats.length) {
         wrap.style.display = 'none';
@@ -469,25 +552,40 @@ function renderCatBars() {
 
     const max = cats[0].total;
     el.innerHTML = cats.slice(0, 10).map(c => {
-        const limit = state.limits[c.category];
+        const limit = limits[c.category];
         const pct = limit ? (c.total / limit) * 100 : (c.total / max) * 100;
         const isOver = limit && c.total > limit;
+        const isWarning = limit && c.total > limit * 0.75 && !isOver;
+
+        let statusClass = '';
+        let statusIcon = '';
+
+        if (isOver) {
+            statusClass = 'over-limit';
+            statusIcon = '🔴 EXCEEDED';
+        } else if (isWarning) {
+            statusClass = 'warning-limit';
+            statusIcon = '🟡 WARNING';
+        } else if (limit && c.total > limit * 0.5) {
+            statusIcon = '🟢';
+        }
 
         return `
-        <div class="cat-row">
+        <div class="cat-row ${statusClass}">
           <div class="cat-row-top">
             <span class="cat-row-name">
               ${CAT_ICON[c.category] || '💡'} ${c.category}
-              ${limit ? `<span class="cat-row-limit">/ Limit: ${fmt(limit)}</span>` : ''}
+              ${limit ? `<span class="cat-row-limit">${statusIcon}</span>` : ''}
             </span>
             <span class="cat-row-amt" style="color:${isOver ? 'var(--red)' : (CAT_COLOR[c.category] || '#ff4d6d')}">${fmt(c.total)}</span>
           </div>
           <div class="cat-track ${limit ? 'limit-set' : ''}" style="position:relative">
-            <div class="cat-fill ${isOver ? 'over-limit' : ''}" 
+            <div class="cat-fill ${isOver ? 'over-limit' : (isWarning ? 'warning-limit' : '')}" 
                  style="width:${Math.min(pct, 100).toFixed(1)}%; background:${CAT_COLOR[c.category] || '#ff4d6d'}">
             </div>
-            ${limit && pct < 100 ? `<div class="cat-marker" style="left:${Math.min(pct, 100).toFixed(1)}%"></div>` : ''}
+            ${limit ? `<div class="cat-limit-mark" style="left:${Math.min(100, (limit / max) * 100).toFixed(1)}%; background:${isOver ? 'var(--red)' : '#cbd5e1'}"></div>` : ''}
           </div>
+          ${limit ? `<div class="cat-row-limit-info">${fmt(limit - c.total >= 0 ? limit - c.total : 0)} remaining of ${fmt(limit)}</div>` : ''}
         </div>`;
     }).join('');
 }
@@ -590,4 +688,79 @@ function toast(msg, type = 'success') {
     el.className = `show ${type}`;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { el.className = ''; }, 3200);
+}
+// ── Warnings Indicator ─────────────────────────────────────────────────────────
+function renderWarningsIndicator() {
+    const warnings = state.warnings || [];
+    if (warnings.length === 0) return;
+
+    const criticalCount = warnings.filter(w => w.type === 'exceeded' || w.type === 'critical').length;
+    const warningCount = warnings.filter(w => w.type === 'warning').length;
+
+    // Create or update warning badge in navigation
+    let badge = $('warning-badge');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'warning-badge';
+        badge.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f43f5e, #ff4d6d);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+            animation: slideIn 0.3s ease;
+        `;
+        badge.innerHTML = `🚨 ${criticalCount + warningCount} Alert${criticalCount + warningCount > 1 ? 's' : ''}`;
+        badge.onclick = () => showWarningsModal();
+        document.body.appendChild(badge);
+    }
+}
+
+function showWarningsModal() {
+    const warnings = state.warnings || [];
+    if (warnings.length === 0) return;
+
+    let html = '<div style="max-height: 400px; overflow-y: auto;">';
+
+    // Critical warnings first
+    const critical = warnings.filter(w => w.type === 'exceeded');
+    const warning = warnings.filter(w => w.type === 'critical');
+    const info = warnings.filter(w => w.type === 'warning');
+
+    if (critical.length > 0) {
+        html += '<h4 style="color: var(--red); margin-bottom: 12px;">🔴 Critical Alerts</h4>';
+        critical.forEach(w => {
+            html += `<div style="background: rgba(244, 63, 94, 0.1); padding: 12px; margin-bottom: 8px; border-left: 3px solid var(--red); border-radius: 4px;">
+                <strong>${w.message}</strong>
+            </div>`;
+        });
+    }
+
+    if (warning.length > 0) {
+        html += '<h4 style="color: #f59e0b; margin-top: 16px; margin-bottom: 12px;">⚠️ Warnings</h4>';
+        warning.forEach(w => {
+            html += `<div style="background: rgba(245, 158, 11, 0.1); padding: 12px; margin-bottom: 8px; border-left: 3px solid #f59e0b; border-radius: 4px;">
+                <strong>${w.message}</strong>
+            </div>`;
+        });
+    }
+
+    if (info.length > 0) {
+        html += '<h4 style="color: var(--text-secondary); margin-top: 16px; margin-bottom: 12px;">ℹ️ Info</h4>';
+        info.forEach(w => {
+            html += `<div style="background: rgba(100, 116, 139, 0.1); padding: 12px; margin-bottom: 8px; border-left: 3px solid var(--text-muted); border-radius: 4px;">
+                ${w.message}
+            </div>`;
+        });
+    }
+
+    html += '</div>';
+
+    alert(`📊 EXPENSE ALERTS (${warnings.length} total)\n\n${warnings.map(w => w.message).join('\n\n')}`);
 }

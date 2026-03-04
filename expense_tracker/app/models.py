@@ -187,3 +187,169 @@ def fetch_ai_memory(key=None):
             result[r["key"]] = []
         result[r["key"]].append(r["content"])
     return result
+
+
+# ── Advanced Analytics ─────────────────────────────────────────────────────────
+
+def get_detailed_analytics(month=None):
+    """Get comprehensive spending analytics with warnings and insights."""
+    if not month:
+        month = datetime.now().strftime("%Y-%m")
+    
+    db = get_db()
+    user_id = g.user["id"]
+    
+    # Current month summary
+    summary = fetch_summary(month)
+    
+    # Daily breakdown
+    daily_rows = db.execute("""
+        SELECT 
+            date,
+            SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as income,
+            SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
+        FROM transactions
+        WHERE user_id = ? AND strftime('%Y-%m', date) = ?
+        GROUP BY date
+        ORDER BY date
+    """, (user_id, month)).fetchall()
+    
+    daily_breakdown = [dict(r) for r in daily_rows]
+    
+    # Weekly breakdown
+    weekly_rows = db.execute("""
+        SELECT 
+            strftime('%W', date) as week,
+            SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as income,
+            SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
+        FROM transactions
+        WHERE user_id = ? AND strftime('%Y-%m', date) = ?
+        GROUP BY week
+        ORDER BY week
+    """, (user_id, month)).fetchall()
+    
+    weekly_breakdown = [dict(r) for r in weekly_rows]
+    
+    # Check all limits
+    limits = fetch_limits()
+    limit_status = []
+    
+    for category, limit in limits.items():
+        spent_row = db.execute("""
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM transactions 
+            WHERE user_id = ? AND category = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?
+        """, (user_id, category, month)).fetchone()
+        
+        spent = spent_row["total"]
+        status = "normal"
+        if spent > limit:
+            status = "exceeded"
+        elif spent > limit * 0.9:
+            status = "critical"
+        elif spent > limit * 0.7:
+            status = "warning"
+        
+        limit_status.append({
+            "category": category,
+            "limit": limit,
+            "spent": spent,
+            "remaining": max(0, limit - spent),
+            "percentage": (spent / limit * 100) if limit > 0 else 0,
+            "status": status
+        })
+    
+    # Sort by spending
+    limit_status.sort(key=lambda x: x["spent"], reverse=True)
+    
+    # Spending velocity (daily average)
+    days_elapsed = len(daily_breakdown)
+    daily_avg_expense = summary["expense"] / days_elapsed if days_elapsed > 0 else 0
+    
+    # Prediction for month-end
+    total_days_in_month = (datetime(datetime.now().year if month.startswith(datetime.now().strftime("%Y")) else int(month.split('-')[0]), 
+                                   int(month.split('-')[1]), 1) + datetime.timedelta(days=32)).replace(day=1) - datetime.timedelta(days=1)
+    total_days = total_days_in_month.day
+    
+    projected_expense = daily_avg_expense * total_days if daily_avg_expense > 0 else 0
+    
+    return {
+        "summary": summary,
+        "daily_breakdown": daily_breakdown,
+        "weekly_breakdown": weekly_breakdown,
+        "limit_status": limit_status,
+        "spending_velocity": {
+            "daily_average": daily_avg_expense,
+            "days_elapsed": days_elapsed,
+            "total_days_in_month": total_days,
+            "projected_expense": projected_expense,
+            "on_track": projected_expense <= summary["income"] if summary["income"] > 0 else True
+        }
+    }
+
+
+def get_expense_warnings():
+    """Get all active expense warnings for the user."""
+    month = datetime.now().strftime("%Y-%m")
+    db = get_db()
+    user_id = g.user["id"]
+    
+    warnings = []
+    limits = fetch_limits()
+    summary = fetch_summary(month)
+    
+    # Check each limit
+    for category, limit in limits.items():
+        spent_row = db.execute("""
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM transactions 
+            WHERE user_id = ? AND category = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?
+        """, (user_id, category, month)).fetchone()
+        
+        spent = spent_row["total"]
+        
+        if spent > limit:
+            warnings.append({
+                "type": "exceeded",
+                "category": category,
+                "limit": limit,
+                "spent": spent,
+                "exceeded_by": spent - limit,
+                "message": f"⚠️ CRITICAL: {category} limit exceeded! Spent ₹{spent:.2f} of ₹{limit:.2f} limit (₹{spent-limit:.2f} over)"
+            })
+        elif spent > limit * 0.9:
+            warnings.append({
+                "type": "critical",
+                "category": category,
+                "limit": limit,
+                "spent": spent,
+                "remaining": limit - spent,
+                "message": f"🔴 CRITICAL: {category} at 90%+! Spent ₹{spent:.2f} of ₹{limit:.2f} (₹{limit-spent:.2f} remaining)"
+            })
+        elif spent > limit * 0.75:
+            warnings.append({
+                "type": "warning",
+                "category": category,
+                "limit": limit,
+                "spent": spent,
+                "remaining": limit - spent,
+                "message": f"🟡 WARNING: {category} at 75%! Spent ₹{spent:.2f} of ₹{limit:.2f} (₹{limit-spent:.2f} remaining)"
+            })
+    
+    # Overall balance warning
+    if summary["balance"] < 0:
+        warnings.insert(0, {
+            "type": "critical",
+            "category": "Overall",
+            "message": f"🔴 CRITICAL: Negative balance! You're ₹{abs(summary['balance']):.2f} in deficit.",
+            "balance": summary["balance"]
+        })
+    elif summary["balance"] < summary["income"] * 0.1:
+        warnings.insert(0, {
+            "type": "warning",
+            "category": "Overall",
+            "message": f"🟡 WARNING: Low balance warning! Balance is only ₹{summary['balance']:.2f}",
+            "balance": summary["balance"]
+        })
+    
+    return warnings

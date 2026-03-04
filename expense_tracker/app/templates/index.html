@@ -126,16 +126,47 @@
                             <div class="ai-text">
                                 <h3
                                     style="font-family: 'Outfit', sans-serif; font-size: 1.05rem; margin-bottom: 4px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-                                    Smart Assistant
+                                    Smart Assistant Analytics
                                     <span
                                         style="font-size: 0.65rem; background: var(--green); color: white; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;">AI</span>
                                 </h3>
                                 <p id="ai-insight-text"
-                                    style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+                                    style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
                                     Analyzing your data...
                                 </p>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- ── Spending Velocity Cards ─────────────────────── -->
+                <section id="velocity-section" class="stats-grid" aria-label="Spending velocity"
+                    style="margin-bottom: 16px;">
+                    <div class="stat-card"
+                        style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));">
+                        <div class="stat-blob"></div>
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-label">Daily Average</div>
+                        <div class="stat-value" id="daily-avg">₹0.00</div>
+                        <div class="stat-sub">Spending per day</div>
+                    </div>
+
+                    <div class="stat-card"
+                        style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(249, 115, 22, 0.1));">
+                        <div class="stat-blob"></div>
+                        <div class="stat-icon">🔮</div>
+                        <div class="stat-label">Month End Projection</div>
+                        <div class="stat-value" id="projected-expense">₹0.00</div>
+                        <div class="stat-sub" id="projection-status">Analyzing...</div>
+                    </div>
+
+                    <div class="stat-card"
+                        style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05));">
+                        <div class="stat-blob"></div>
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-label">Budget Health</div>
+                        <div class="stat-value" id="budget-health">💚</div>
+                        <div class="stat-sub" id="health-message">Calculating...</div>
                     </div>
                 </section>
 

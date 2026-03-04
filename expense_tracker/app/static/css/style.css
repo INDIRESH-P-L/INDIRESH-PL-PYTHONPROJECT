@@ -1182,6 +1182,56 @@ body {
     transition: width .8s var(--ease);
 }
 
+.cat-fill.over-limit {
+    background: linear-gradient(90deg, var(--red), #ff4d6d) !important;
+    box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
+}
+
+.cat-fill.warning-limit {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+.cat-limit-mark {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 8px;
+    margin-top: -1px;
+    border-left: 1px solid;
+}
+
+.cat-row.over-limit {
+    background: var(--red-dim);
+    padding: 8px;
+    border-radius: 8px;
+    border-left: 3px solid var(--red);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.cat-row.warning-limit {
+    background: rgba(245, 158, 11, 0.1);
+    padding: 8px;
+    border-radius: 8px;
+    border-left: 3px solid #f59e0b;
+}
+
+.cat-row-limit-info {
+    font-size: .7rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.cat-row-limit {
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--green-dim);
+    color: var(--green);
+}
+
 /* ── Empty state ─────────────────────────────────── */
 .empty {
     text-align: center;
@@ -1306,4 +1356,69 @@ body {
 ::-webkit-scrollbar-thumb {
     background: var(--border-default);
     border-radius: 4px;
+}
+
+/* ── Analytics & Warnings Animations ─────────────── */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes wiggle {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(-2deg);
+    }
+
+    75% {
+        transform: rotate(2deg);
+    }
+}
+
+#warning-badge {
+    animation: wiggle 2s ease-in-out infinite, slideIn 0.3s ease !important;
+}
+
+#warning-badge:hover {
+    transform: scale(1.05) !important;
+}
+
+/* ── Cards Enhancements ──────────────────────────– */
+.stat-card {
+    transition: all var(--dur) var(--ease);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card.alert {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.1), rgba(255, 77, 109, 0.1)) !important;
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    animation: pulse 2s ease-in-out infinite;
 }
