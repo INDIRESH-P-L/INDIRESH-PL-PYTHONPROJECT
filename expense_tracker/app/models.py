@@ -1,6 +1,6 @@
 from .database import get_db
 from flask import g
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # ── Query helpers ──────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ def get_detailed_analytics(month=None):
     
     # Prediction for month-end
     total_days_in_month = (datetime(datetime.now().year if month.startswith(datetime.now().strftime("%Y")) else int(month.split('-')[0]), 
-                                   int(month.split('-')[1]), 1) + datetime.timedelta(days=32)).replace(day=1) - datetime.timedelta(days=1)
+                                   int(month.split('-')[1]), 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     total_days = total_days_in_month.day
     
     projected_expense = daily_avg_expense * total_days if daily_avg_expense > 0 else 0

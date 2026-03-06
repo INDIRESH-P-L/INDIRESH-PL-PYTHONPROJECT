@@ -1,27 +1,39 @@
-# Python
+# ── Python bytecode ────────────────────────────────
 __pycache__/
 *.py[cod]
-*.pyo
 *.pyd
-.Python
+*.pyo
 *.egg-info/
 dist/
 build/
 .eggs/
 
-# Virtual env
+# ── Virtual environments ────────────────────────────
 venv/
 env/
 .venv/
 
-# Database
+# ── Database (runtime data — not versioned) ─────────
 data/
+instance/
+*.db
+*.sqlite
+*.sqlite3
 
-# IDE
+# ── Environment / secrets ───────────────────────────
+.env
+.flaskenv
+*.env
+
+# ── IDE / OS artefacts ──────────────────────────────
 .vscode/
 .idea/
 *.swp
+.DS_Store
+Thumbs.db
 
-# Env
-.env
-.flaskenv
+# ── Presentation artefacts ──────────────────────────
+*.pptx
+
+# ── Logs ────────────────────────────────────────────
+*.log

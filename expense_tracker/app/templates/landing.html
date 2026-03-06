@@ -17,15 +17,15 @@
             /* Cyan 500 */
             --accent-secondary: #6366f1;
             /* Indigo 500 */
-            --deep-space: #f8fafc;
-            /* Slate 50 */
+            --deep-space: #070414;
+            /* Deep Violet Space */
         }
 
         body {
             background: var(--deep-space);
             overflow-x: hidden;
-            color: #0f172a;
-            /* Slate 900 */
+            color: #f8fafc;
+            /* Almost white */
             font-family: 'Inter', sans-serif;
             margin: 0;
         }
@@ -35,14 +35,14 @@
             position: fixed;
             inset: 0;
             z-index: -2;
-            background: radial-gradient(circle at center, #ffffff 0%, #f1f5f9 100%);
+            background: radial-gradient(circle at center, #1b0f36 0%, #070414 100%);
         }
 
         .nebula-glow {
             position: fixed;
             width: 100vw;
             height: 100vw;
-            background: radial-gradient(circle, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 60%);
             top: -50vw;
             right: -50vw;
             z-index: -1;
@@ -66,7 +66,7 @@
             position: absolute;
             inset: 0;
             pointer-events: none;
-            z-index: 1;
+            z-index: 0;
         }
 
         .float-img {
@@ -97,15 +97,15 @@
             width: 90%;
             max-width: 1300px;
             padding: 16px 40px;
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(24px);
-            border: 1px solid rgba(15, 23, 42, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 1000;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         .logo-txt {
@@ -145,6 +145,7 @@
             line-height: 0.9;
             margin-bottom: 30px;
             letter-spacing: -0.04em;
+            color: #ffffff;
         }
 
         .h1-gradient {
@@ -167,13 +168,12 @@
             font-size: 1.6rem;
             font-weight: 800;
             border-radius: 20px;
-            background: #0f172a;
-            /* Slate 900 */
-            color: #fff;
+            background: #ffffff;
+            color: #0f172a;
             text-decoration: none;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: inline-block;
-            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.1);
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.1);
         }
 
         .btn-action:hover {
@@ -191,12 +191,12 @@
         }
 
         .hero-img-orb {
-            width: 120%;
-            height: auto;
-            border-radius: 50px;
-            box-shadow: 0 0 120px rgba(6, 182, 212, 0.1);
-            transform: perspective(1000px) rotateY(-10deg) rotateX(5deg);
+            width: 100%;
+            border-radius: 30px;
+            box-shadow: 0 0 120px rgba(99, 102, 241, 0.3), 0 0 60px rgba(6, 182, 212, 0.15);
+            transform: perspective(1000px) rotateY(-5deg) rotateX(3deg);
             animation: orbital 10s infinite ease-in-out;
+            overflow: hidden;
         }
 
         @keyframes orbital {
@@ -227,6 +227,7 @@
             font-size: 4.5rem;
             font-weight: 800;
             margin-bottom: 20px;
+            color: #ffffff;
         }
 
         .feat-grid {
@@ -236,28 +237,29 @@
         }
 
         .feat-card {
-            background: #ffffff;
-            border: 1px solid rgba(15, 23, 42, 0.05);
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 60px 40px;
             border-radius: 40px;
             transition: all 0.5s var(--ease);
             position: relative;
             backdrop-filter: blur(10px);
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
         }
 
         .feat-card:hover {
-            background: #ffffff;
+            background: rgba(30, 41, 59, 0.6);
             border-color: var(--accent-primary);
             transform: translateY(-20px);
-            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 30px 60px rgba(6, 182, 212, 0.2);
         }
 
         .feat-icon-img {
             width: 140px;
             margin-bottom: 30px;
-            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
         }
 
         /* Action Footer */
@@ -281,6 +283,7 @@
             font-size: 5rem;
             font-weight: 900;
             margin-bottom: 30px;
+            color: #ffffff;
         }
 
         .cta-inner p {
@@ -342,36 +345,132 @@
 
     <header class="glass-header">
         <a href="/" class="logo-txt">FinanceAgent</a>
-        <div style="display: flex; gap: 32px; align-items: center;">
-            <a href="{{ url_for('auth.login') }}"
-                style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 1.1rem;">Sign In</a>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <a href="{{ url_for('auth.login') }}" class="btn-action"
+                style="padding: 12px 32px; font-size: 1.1rem; border-radius: 14px; background: transparent; color: #ffffff; border: 2px solid rgba(255,255,255,0.4); box-shadow: none;">Sign
+                In</a>
             <a href="{{ url_for('auth.register') }}" class="btn-action"
                 style="padding: 12px 32px; font-size: 1.1rem; border-radius: 14px;">Elevate Now</a>
         </div>
     </header>
 
     <div class="floating-layer">
-        <!-- Floating 3D Elements -->
-        <img src="{{ url_for('static', filename='img/coin.png') }}" class="float-img"
-            style="top: 20%; left: 10%; animation-delay: 0s; width: 80px;">
-        <img src="{{ url_for('static', filename='img/chart_3d.png') }}" class="float-img"
-            style="top: 65%; left: 5%; animation-delay: -2s; width: 140px;">
-        <img src="{{ url_for('static', filename='img/card_3d.png') }}" class="float-img"
-            style="top: 15%; right: 5%; animation-delay: -1.5s; width: 200px;">
-        <img src="{{ url_for('static', filename='img/coin.png') }}" class="float-img"
-            style="bottom: 10%; right: 15%; animation-delay: -4s; width: 100px;">
+        <!-- Floating Elements — right side only so they don't cover hero text/button -->
+        <div class="float-img"
+            style="top: 12%; right: 3%; animation-delay: -1.5s; width: 90px; font-size: 70px; display:flex; align-items:center; justify-content:center; filter: drop-shadow(0 10px 20px rgba(236,72,153,0.5));">
+            💳
+        </div>
+        <div class="float-img"
+            style="top: 55%; right: 2%; animation-delay: 0s; width: 80px; font-size: 60px; display:flex; align-items:center; justify-content:center; filter: drop-shadow(0 10px 20px rgba(6,182,212,0.5));">
+            🪙
+        </div>
+        <div class="float-img"
+            style="bottom: 8%; right: 22%; animation-delay: -4s; width: 90px; font-size: 70px; display:flex; align-items:center; justify-content:center; filter: drop-shadow(0 10px 20px rgba(99,102,241,0.5));">
+            📊
+        </div>
+        <div class="float-img"
+            style="top: 80%; left: 3%; animation-delay: -2s; width: 80px; font-size: 60px; display:flex; align-items:center; justify-content:center; filter: drop-shadow(0 10px 20px rgba(245,158,11,0.5));">
+            🪙
+        </div>
     </div>
 
-    <main class="hero-main">
+    <main class="hero-main" style="position: relative; z-index: 1;">
         <div class="hero-grid">
-            <div class="hero-content">
+            <div class="hero-content" style="position: relative; z-index: 2;">
                 <h1>Command<br>Your <span class="h1-gradient">Fortune</span></h1>
                 <p>The first AI-native wealth management engine built for the next generation. Hyper-personalized,
                     elegantly powerful, and beautifully simple.</p>
-                <a href="{{ url_for('auth.register') }}" class="btn-action">Begin Your Journey</a>
+                <a href="{{ url_for('auth.register') }}" class="btn-action"
+                    style="position: relative; z-index: 10;">Begin Your Journey</a>
             </div>
             <div class="hero-visual-wrap">
-                <img src="{{ url_for('static', filename='img/hero.png') }}" class="hero-img-orb" alt="Financial Future">
+                <!-- Animated SVG Dashboard Mockup -->
+                <div class="hero-img-orb"
+                    style="background: rgba(15, 8, 30, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column; padding:30px; gap:16px;">
+                    <div style="display:flex; gap:12px; margin-bottom:8px;">
+                        <div style="width:12px; height:12px; border-radius:50%; background:#f43f5e;"></div>
+                        <div style="width:12px; height:12px; border-radius:50%; background:#f59e0b;"></div>
+                        <div style="width:12px; height:12px; border-radius:50%; background:#06b6d4;"></div>
+                        <span style="color:rgba(255,255,255,0.4); font-size:0.75rem; margin-left:auto;">TrackEx
+                            Dashboard</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+                        <div
+                            style="background:rgba(139,92,246,0.2); border:1px solid rgba(139,92,246,0.3); border-radius:12px; padding:14px;">
+                            <div style="font-size:1.4rem; font-family:'Outfit'; font-weight:800; color:#8b5cf6;">₹84K
+                            </div>
+                            <div style="font-size:0.65rem; color:rgba(255,255,255,0.5); margin-top:4px;">BALANCE</div>
+                        </div>
+                        <div
+                            style="background:rgba(6,182,212,0.2); border:1px solid rgba(6,182,212,0.3); border-radius:12px; padding:14px;">
+                            <div style="font-size:1.4rem; font-family:'Outfit'; font-weight:800; color:#06b6d4;">₹1.2L
+                            </div>
+                            <div style="font-size:0.65rem; color:rgba(255,255,255,0.5); margin-top:4px;">INCOME</div>
+                        </div>
+                        <div
+                            style="background:rgba(244,63,94,0.2); border:1px solid rgba(244,63,94,0.3); border-radius:12px; padding:14px;">
+                            <div style="font-size:1.4rem; font-family:'Outfit'; font-weight:800; color:#f43f5e;">₹36K
+                            </div>
+                            <div style="font-size:0.65rem; color:rgba(255,255,255,0.5); margin-top:4px;">SPENT</div>
+                        </div>
+                    </div>
+                    <!-- Animated Chart Bars -->
+                    <div style="background:rgba(255,255,255,0.03); border-radius:12px; padding:16px;">
+                        <div style="font-size:0.7rem; color:rgba(255,255,255,0.4); margin-bottom:12px;">MONTHLY TREND
+                        </div>
+                        <div style="display:flex; align-items:flex-end; gap:8px; height:80px;">
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #06b6d4, rgba(6,182,212,0.3)); border-radius:4px 4px 0 0; height:60%; animation: barPulse 2s ease-in-out infinite;">
+                            </div>
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #8b5cf6, rgba(139,92,246,0.3)); border-radius:4px 4px 0 0; height:80%; animation: barPulse 2.2s ease-in-out infinite;">
+                            </div>
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #06b6d4, rgba(6,182,212,0.3)); border-radius:4px 4px 0 0; height:45%; animation: barPulse 2.4s ease-in-out infinite;">
+                            </div>
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #f43f5e, rgba(244,63,94,0.3)); border-radius:4px 4px 0 0; height:90%; animation: barPulse 2.6s ease-in-out infinite;">
+                            </div>
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #8b5cf6, rgba(139,92,246,0.3)); border-radius:4px 4px 0 0; height:65%; animation: barPulse 2.8s ease-in-out infinite;">
+                            </div>
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #06b6d4, rgba(6,182,212,0.3)); border-radius:4px 4px 0 0; height:75%; animation: barPulse 3s ease-in-out infinite;">
+                            </div>
+                            <div
+                                style="flex:1; background:linear-gradient(to top, #f59e0b, rgba(245,158,11,0.3)); border-radius:4px 4px 0 0; height:55%; animation: barPulse 3.2s ease-in-out infinite;">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Transaction Row Examples -->
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div
+                            style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); border-radius:10px; padding:10px 12px;">
+                            <span style="font-size:1.2rem;">🍔</span>
+                            <span style="flex:1; font-size:0.8rem; color:rgba(255,255,255,0.7);">Food & Dining</span>
+                            <span style="font-size:0.85rem; color:#f43f5e; font-weight:700;">-₹450</span>
+                        </div>
+                        <div
+                            style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); border-radius:10px; padding:10px 12px;">
+                            <span style="font-size:1.2rem;">💼</span>
+                            <span style="flex:1; font-size:0.8rem; color:rgba(255,255,255,0.7);">Salary</span>
+                            <span style="font-size:0.85rem; color:#06b6d4; font-weight:700;">+₹80,000</span>
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes barPulse {
+
+                        0%,
+                        100% {
+                            opacity: 0.8
+                        }
+
+                        50% {
+                            opacity: 1
+                        }
+                    }
+                </style>
             </div>
         </div>
     </main>
@@ -385,21 +484,25 @@
 
         <div class="feat-grid">
             <div class="feat-card scroll-reveal" style="transition-delay: 0.1s;">
-                <img src="{{ url_for('static', filename='img/ai_brain.png') }}" class="feat-icon-img" alt="AI Core">
+                <div class="feat-icon-svg"
+                    style="font-size: 5rem; margin-bottom: 30px; display:block; filter: drop-shadow(0 10px 20px rgba(139,92,246,0.5));">
+                    🧠</div>
                 <h3 style="font-size: 2.2rem; font-family: 'Outfit'; margin-bottom: 20px;">AI Wealth Core</h3>
                 <p style="color: #94a3b8; font-size: 1.1rem;">Self-learning algorithms that evolve with your portfolio,
                     offering predictive insights before they become obvious.</p>
             </div>
             <div class="feat-card scroll-reveal" style="transition-delay: 0.2s;">
-                <img src="{{ url_for('static', filename='img/chart_3d.png') }}" class="feat-icon-img"
-                    alt="Deep Analytics">
+                <div class="feat-icon-svg"
+                    style="font-size: 5rem; margin-bottom: 30px; display:block; filter: drop-shadow(0 10px 20px rgba(6,182,212,0.5));">
+                    📈</div>
                 <h3 style="font-size: 2.2rem; font-family: 'Outfit'; margin-bottom: 20px;">Deep Metrics</h3>
                 <p style="color: #94a3b8; font-size: 1.1rem;">Real-time analysis of entire spending ecosystems. Zero
                     lag, absolute precision, complete control.</p>
             </div>
             <div class="feat-card scroll-reveal" style="transition-delay: 0.3s;">
-                <img src="{{ url_for('static', filename='img/card_3d.png') }}" class="feat-icon-img"
-                    alt="Quantum Shield">
+                <div class="feat-icon-svg"
+                    style="font-size: 5rem; margin-bottom: 30px; display:block; filter: drop-shadow(0 10px 20px rgba(244,63,94,0.5));">
+                    🔐</div>
                 <h3 style="font-size: 2.2rem; font-family: 'Outfit'; margin-bottom: 20px;">Vault Protocol</h3>
                 <p style="color: #94a3b8; font-size: 1.1rem;">Bank-grade encryption meets decentralized principles. Your
                     data is your own, protected by our ultimate shield.</p>

@@ -5,11 +5,22 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app import create_app
+from dotenv import load_dotenv
 
-app = create_app("development")
+# Load env variables from .env if present
+load_dotenv()
+print(f"DEBUG: GEMINI_API_KEY loaded? {'Yes' if os.environ.get('GEMINI_API_KEY') else 'No'}")
+
+env = os.environ.get("FLASK_ENV", "development")
+app = create_app(env)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
-    print(f"\n  Expense Tracker  ->  http://127.0.0.1:{port}\n")
-    # Disable reloader on Windows to prevent random crashes during development
-    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
+    
+    if env == "production":
+        from waitress import serve
+        print(f"\n  TrackEx (Production)  ->  http://0.0.0.0:{port}\n")
+        serve(app, host="0.0.0.0", port=port)
+    else:
+        print(f"\n  TrackEx (Development)  ->  http://127.0.0.1:{port}\n")
+        app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)

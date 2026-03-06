@@ -1,5 +1,4 @@
 Flask
-Authlib
 requests
 python-dotenv
-sqlite3
+waitress

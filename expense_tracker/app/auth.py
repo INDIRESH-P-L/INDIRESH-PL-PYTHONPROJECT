@@ -1,42 +1,56 @@
 import functools
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify
+import requests
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
-from authlib.integrations.flask_client import OAuth
 from .database import get_db
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
 
-oauth = OAuth()
-
-@auth.record_once
-def on_load(state):
-    oauth.init_app(state.app)
-    oauth.register(
-        name='google',
-        client_id=state.app.config['GOOGLE_CLIENT_ID'],
-        client_secret=state.app.config['GOOGLE_CLIENT_SECRET'],
-        server_metadata_url=state.app.config['GOOGLE_DISCOVERY_URL'],
-        client_kwargs={
-            'scope': 'openid email profile'
-        }
-    )
-
 @auth.route("/google/login")
 def google_login():
+    client_id = current_app.config['GOOGLE_CLIENT_ID']
     redirect_uri = url_for('auth.google_callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    scope = 'openid email profile'
+    response_type = 'code'
+    google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={redirect_uri}&response_type={response_type}&scope={scope}"
+    return redirect(google_auth_url)
 
 @auth.route("/google/callback")
 def google_callback():
-    token = oauth.google.authorize_access_token()
-    user_info = token.get('userinfo')
-    if not user_info:
+    code = request.args.get('code')
+    if not code:
+        flash("Google login failed")
+        return redirect(url_for('auth.login'))
+        
+    client_id = current_app.config['GOOGLE_CLIENT_ID']
+    client_secret = current_app.config['GOOGLE_CLIENT_SECRET']
+    redirect_uri = url_for('auth.google_callback', _external=True)
+    
+    token_url = "https://oauth2.googleapis.com/token"
+    token_data = {
+        'code': code,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'redirect_uri': redirect_uri,
+        'grant_type': 'authorization_code'
+    }
+    
+    token_response = requests.post(token_url, data=token_data).json()
+    if 'access_token' not in token_response:
+        flash("Failed to retrieve access token from Google.")
+        return redirect(url_for('auth.login'))
+        
+    access_token = token_response['access_token']
+    user_info_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+    user_info = requests.get(user_info_url, headers={'Authorization': f'Bearer {access_token}'}).json()
+    
+    if not user_info or 'sub' not in user_info:
         flash("Failed to retrieve user information from Google.")
         return redirect(url_for('auth.login'))
 
     google_id = user_info['sub']
-    email = user_info['email']
-    username = user_info.get('name', email.split('@')[0])
+    email = user_info.get('email', '')
+    username = user_info.get('name', email.split('@')[0] if email else 'Google User')
 
     db = get_db()
     user = db.execute(
@@ -59,8 +73,8 @@ def google_callback():
         else:
             # Create new user
             db.execute(
-                "INSERT INTO users (username, google_id, email) VALUES (?, ?, ?)",
-                (username, google_id, email)
+                "INSERT INTO users (username, google_id, email, password) VALUES (?, ?, ?, ?)",
+                (username, google_id, email, '')
             )
             db.commit()
             user = db.execute(

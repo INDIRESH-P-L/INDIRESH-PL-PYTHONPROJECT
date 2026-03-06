@@ -1,8 +1,6 @@
 /* ═══════════════════════════════════════════════════
-   Expense Tracker — Main Application JS
+   TrackEx — Main Application JS
    ═══════════════════════════════════════════════════ */
-
-// ── Category data ──────────────────────────────────────────────────────────────
 const CATEGORIES = {
     income: [
         { value: 'Salary', label: '💼 Salary', color: '#0ea5e9' }, // Sky 500

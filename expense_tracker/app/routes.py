@@ -23,6 +23,7 @@ def require_login():
 
 @api.post("/chat")
 def chat():
+    print(f"DEBUG: /api/chat called")
     data = request.get_json(silent=True) or {}
     message = data.get("message", "")
     if not message:
