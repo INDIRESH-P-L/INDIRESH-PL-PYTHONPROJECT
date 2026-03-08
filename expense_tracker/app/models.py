@@ -1,247 +1,254 @@
-from .database import get_db
+from datetime import datetime
+from .extensions import db
 from flask import g
-from datetime import datetime, timedelta
 
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(200))
+    google_id = db.Column(db.String(100), unique=True)
+    email = db.Column(db.String(120), unique=True)
+    
+    transactions = db.relationship('Transaction', backref='user', lazy=True)
+    limits = db.relationship('Limit', backref='user', lazy=True)
+    memories = db.relationship('AIMemory', backref='user', lazy=True)
 
-# ── Query helpers ──────────────────────────────────────────────────────────────
+class Transaction(db.Model):
+    __tablename__ = 'transactions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(10), nullable=False) # 'income' or 'expense'
+    category = db.Column(db.String(50), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    note = db.Column(db.Text, default='')
+    date = db.Column(db.String(20), nullable=False) # Stored as string for now to match current logic
+
+class Limit(db.Model):
+    __tablename__ = 'limits'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    monthly_limit = db.Column(db.Float, nullable=False)
+    __table_args__ = (db.UniqueConstraint('user_id', 'category', name='_user_category_uc'),)
+
+class AIMemory(db.Model):
+    __tablename__ = 'ai_memory'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    key = db.Column(db.String(50), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('user_id', 'key', 'content', name='_user_key_content_uc'),)
+
+# ── helper functions (converted to ORM) ──────────────────────────────────────────────
 
 def fetch_all_transactions(limit=None, tx_type=None, month=None):
-    db = get_db()
     user_id = g.user["id"]
-    sql    = "SELECT * FROM transactions WHERE user_id = ?"
-    params = [user_id]
+    query = Transaction.query.filter_by(user_id=user_id)
 
     if tx_type in ("income", "expense"):
-        sql += " AND type = ?"
-        params.append(tx_type)
+        query = query.filter_by(type=tx_type)
 
-    if month:                      # e.g. "2026-02"
-        sql += " AND strftime('%Y-%m', date) = ?"
-        params.append(month)
+    if month: # e.g. "2026-02"
+        query = query.filter(Transaction.date.like(f"{month}%"))
 
-    sql += " ORDER BY date DESC, id DESC"
+    query = query.order_by(Transaction.date.desc(), Transaction.id.desc())
 
     if limit:
-        sql += " LIMIT ?"
-        params.append(limit)
+        query = query.limit(limit)
 
-    return [dict(r) for r in db.execute(sql, params).fetchall()]
-
+    results = query.all()
+    return [{
+        "id": r.id,
+        "user_id": r.user_id,
+        "type": r.type,
+        "category": r.category,
+        "amount": r.amount,
+        "note": r.note,
+        "date": r.date
+    } for r in results]
 
 def fetch_summary(month=None):
-    db     = get_db()
     user_id = g.user["id"]
-    params = [user_id]
-    where  = "AND user_id = ?"
+    
+    # Base filters
+    income_query = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=user_id, type='income')
+    expense_query = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=user_id, type='expense')
+    cat_query = db.session.query(Transaction.category, db.func.sum(Transaction.amount).label('total')).filter_by(user_id=user_id, type='expense')
 
     if month:
-        where += " AND strftime('%Y-%m', date) = ?"
-        params.append(month)
+        income_query = income_query.filter(Transaction.date.like(f"{month}%"))
+        expense_query = expense_query.filter(Transaction.date.like(f"{month}%"))
+        cat_query = cat_query.filter(Transaction.date.like(f"{month}%"))
 
-    income  = db.execute(
-        f"SELECT COALESCE(SUM(amount), 0) AS t FROM transactions WHERE type='income' {where}",
-        params
-    ).fetchone()["t"]
+    income = income_query.scalar() or 0
+    expense = expense_query.scalar() or 0
+    
+    cat_rows = cat_query.group_by(Transaction.category).order_by(db.desc('total')).all()
+    
+    # Monthly trend (last 6 months) - SQLAlchemy version
+    # Note: strftime is SQLite specific, for Postgres we'll need to adapt or use cross-compatible logic
+    # For now, let's try to stick to something that works on both if possible, or check engine type
+    
+    engine_name = db.engine.name
+    if engine_name == 'sqlite':
+        trend_query = db.session.query(
+            db.func.strftime('%Y-%m', Transaction.date).label('month'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id)
+    else: # Postgres
+        trend_query = db.session.query(
+            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM').label('month'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id)
 
-    expense = db.execute(
-        f"SELECT COALESCE(SUM(amount), 0) AS t FROM transactions WHERE type='expense' {where}",
-        params
-    ).fetchone()["t"]
-
-    # Category breakdown (expense only)
-    cat_rows = db.execute(
-        f"""SELECT category, SUM(amount) AS total
-            FROM transactions
-            WHERE type='expense' {where}
-            GROUP BY category
-            ORDER BY total DESC""",
-        params
-    ).fetchall()
-
-    # Monthly trend (last 6 months)
-    trend = db.execute("""
-        SELECT
-            strftime('%Y-%m', date) AS month,
-            SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) AS income,
-            SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS expense
-        FROM transactions
-        WHERE user_id = ?
-        GROUP BY month
-        ORDER BY month DESC
-        LIMIT 6
-    """, (user_id,)).fetchall()
+    trend = trend_query.group_by('month').order_by(db.desc('month')).limit(6).all()
 
     return {
-        "income":     income,
-        "expense":    expense,
-        "balance":    income - expense,
-        "categories": [dict(r) for r in cat_rows],
-        "trend":      [dict(r) for r in reversed(trend)],
+        "income": float(income),
+        "expense": float(expense),
+        "balance": float(income - expense),
+        "categories": [{"category": r.category, "total": float(r.total)} for r in cat_rows],
+        "trend": [{"month": r.month, "income": float(r.income), "expense": float(r.expense)} for r in reversed(trend)],
     }
 
-
 def insert_transaction(tx_type, category, amount, note, date):
-    db = get_db()
     user_id = g.user["id"]
-    db.execute(
-        "INSERT INTO transactions (user_id, type, category, amount, note, date) VALUES (?,?,?,?,?,?)",
-        (user_id, tx_type, category, amount, note, date),
+    new_tx = Transaction(
+        user_id=user_id,
+        type=tx_type,
+        category=category,
+        amount=amount,
+        note=note,
+        date=date
     )
-    db.commit()
-
+    db.session.add(new_tx)
+    db.session.commit()
 
 def delete_transaction(tx_id):
-    db = get_db()
     user_id = g.user["id"]
-    db.execute("DELETE FROM transactions WHERE id = ? AND user_id = ?", (tx_id, user_id))
-    db.commit()
-
+    tx = Transaction.query.filter_by(id=tx_id, user_id=user_id).first()
+    if tx:
+        db.session.delete(tx)
+        db.session.commit()
 
 def fetch_available_months():
-    db = get_db()
     user_id = g.user["id"]
-    rows = db.execute(
-        "SELECT DISTINCT strftime('%Y-%m', date) AS m FROM transactions WHERE user_id = ? ORDER BY m DESC", (user_id,)
-    ).fetchall()
-    return [r["m"] for r in rows]
+    engine_name = db.engine.name
+    if engine_name == 'sqlite':
+        rows = db.session.query(db.func.strftime('%Y-%m', Transaction.date).label('m'))\
+            .filter_by(user_id=user_id).distinct().order_by(db.desc('m')).all()
+    else:
+        rows = db.session.query(db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM').label('m'))\
+            .filter_by(user_id=user_id).distinct().order_by(db.desc('m')).all()
+    return [r.m for r in rows]
 
-
-def set_limit(category, limit):
-    db = get_db()
+def set_limit(category, limit_amount):
     user_id = g.user["id"]
-    db.execute(
-        """INSERT INTO limits (user_id, category, monthly_limit) VALUES (?, ?, ?)
-           ON CONFLICT(user_id, category) DO UPDATE SET monthly_limit=excluded.monthly_limit""",
-        (user_id, category, limit)
-    )
-    db.commit()
-
+    limit_obj = Limit.query.filter_by(user_id=user_id, category=category).first()
+    if limit_obj:
+        limit_obj.monthly_limit = limit_amount
+    else:
+        limit_obj = Limit(user_id=user_id, category=category, monthly_limit=limit_amount)
+        db.session.add(limit_obj)
+    db.session.commit()
 
 def fetch_limits():
-    db = get_db()
     user_id = g.user["id"]
-    rows = db.execute("SELECT category, monthly_limit FROM limits WHERE user_id = ?", (user_id,)).fetchall()
-    return {r["category"]: r["monthly_limit"] for r in rows}
-
+    rows = Limit.query.filter_by(user_id=user_id).all()
+    return {r.category: r.monthly_limit for r in rows}
 
 def check_category_limit_exceeded(category, month=None):
     if not month:
         month = datetime.now().strftime("%Y-%m")
     
-    db = get_db()
     user_id = g.user["id"]
+    limit_obj = Limit.query.filter_by(user_id=user_id, category=category).first()
     
-    # Get limit
-    limit_row = db.execute(
-        "SELECT monthly_limit FROM limits WHERE user_id = ? AND category = ?", 
-        (user_id, category)
-    ).fetchone()
+    if not limit_obj:
+        return None
     
-    if not limit_row:
-        return None  # No limit set
+    limit = limit_obj.monthly_limit
     
-    limit = limit_row["monthly_limit"]
+    spent = db.session.query(db.func.sum(Transaction.amount))\
+        .filter_by(user_id=user_id, category=category, type='expense')\
+        .filter(Transaction.date.like(f"{month}%")).scalar() or 0
     
-    # Get total spent this month in this category
-    spent_row = db.execute(
-        """SELECT COALESCE(SUM(amount), 0) as total 
-           FROM transactions 
-           WHERE user_id = ? AND category = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?""",
-        (user_id, category, month)
-    ).fetchone()
-    
-    total_spent = spent_row["total"]
-    
-    if total_spent > limit:
-        return {"category": category, "limit": limit, "spent": total_spent, "exceeded_by": total_spent - limit}
+    if spent > limit:
+        return {"category": category, "limit": limit, "spent": float(spent), "exceeded_by": float(spent - limit)}
     
     return None
 
-
 def store_ai_memory(key, content):
-    db = get_db()
     user_id = g.user["id"]
-    db.execute(
-        "INSERT OR REPLACE INTO ai_memory (user_id, key, content) VALUES (?, ?, ?)",
-        (user_id, key, content)
-    )
-    db.commit()
-
+    memory = AIMemory.query.filter_by(user_id=user_id, key=key, content=content).first()
+    if not memory:
+        memory = AIMemory(user_id=user_id, key=key, content=content)
+        db.session.add(memory)
+        db.session.commit()
 
 def fetch_ai_memory(key=None):
-    db = get_db()
     user_id = g.user["id"]
-    sql = "SELECT key, content FROM ai_memory WHERE user_id = ?"
-    params = [user_id]
     if key:
-        sql += " AND key = ?"
-        params.append(key)
+        rows = AIMemory.query.filter_by(user_id=user_id, key=key).all()
+        return [r.content for r in rows]
     
-    rows = db.execute(sql, params).fetchall()
-    if key:
-        return [r["content"] for r in rows]
-    
+    rows = AIMemory.query.filter_by(user_id=user_id).all()
     result = {}
     for r in rows:
-        if r["key"] not in result:
-            result[r["key"]] = []
-        result[r["key"]].append(r["content"])
+        if r.key not in result:
+            result[r.key] = []
+        result[r.key].append(r.content)
     return result
 
-
-# ── Advanced Analytics ─────────────────────────────────────────────────────────
-
 def get_detailed_analytics(month=None):
-    """Get comprehensive spending analytics with warnings and insights."""
     if not month:
         month = datetime.now().strftime("%Y-%m")
     
-    db = get_db()
     user_id = g.user["id"]
-    
-    # Current month summary
     summary = fetch_summary(month)
     
     # Daily breakdown
-    daily_rows = db.execute("""
-        SELECT 
-            date,
-            SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as income,
-            SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
-        FROM transactions
-        WHERE user_id = ? AND strftime('%Y-%m', date) = ?
-        GROUP BY date
-        ORDER BY date
-    """, (user_id, month)).fetchall()
+    daily_rows = db.session.query(
+        Transaction.date,
+        db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+        db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+    ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
+    .group_by(Transaction.date).order_by(Transaction.date).all()
     
-    daily_breakdown = [dict(r) for r in daily_rows]
+    daily_breakdown = [{"date": r.date, "income": float(r.income), "expense": float(r.expense)} for r in daily_rows]
     
-    # Weekly breakdown
-    weekly_rows = db.execute("""
-        SELECT 
-            strftime('%W', date) as week,
-            SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as income,
-            SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
-        FROM transactions
-        WHERE user_id = ? AND strftime('%Y-%m', date) = ?
-        GROUP BY week
-        ORDER BY week
-    """, (user_id, month)).fetchall()
+    # Weekly breakdown (simplified for now as week formats differ)
+    engine_name = db.engine.name
+    if engine_name == 'sqlite':
+        weekly_rows = db.session.query(
+            db.func.strftime('%W', Transaction.date).label('week'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
+        .group_by('week').order_by('week').all()
+    else: # Postgres
+        weekly_rows = db.session.query(
+            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW').label('week'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
+        .group_by('week').order_by('week').all()
+        
+    weekly_breakdown = [{"week": r.week, "income": float(r.income), "expense": float(r.expense)} for r in weekly_rows]
     
-    weekly_breakdown = [dict(r) for r in weekly_rows]
-    
-    # Check all limits
+    # Limit status
     limits = fetch_limits()
     limit_status = []
     
     for category, limit in limits.items():
-        spent_row = db.execute("""
-            SELECT COALESCE(SUM(amount), 0) as total
-            FROM transactions 
-            WHERE user_id = ? AND category = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?
-        """, (user_id, category, month)).fetchone()
+        spent = db.session.query(db.func.sum(Transaction.amount))\
+            .filter_by(user_id=user_id, category=category, type='expense')\
+            .filter(Transaction.date.like(f"{month}%")).scalar() or 0
         
-        spent = spent_row["total"]
         status = "normal"
         if spent > limit:
             status = "exceeded"
@@ -252,26 +259,28 @@ def get_detailed_analytics(month=None):
         
         limit_status.append({
             "category": category,
-            "limit": limit,
-            "spent": spent,
-            "remaining": max(0, limit - spent),
-            "percentage": (spent / limit * 100) if limit > 0 else 0,
+            "limit": float(limit),
+            "spent": float(spent),
+            "remaining": float(max(0, limit - spent)),
+            "percentage": float((spent / limit * 100) if limit > 0 else 0),
             "status": status
         })
     
-    # Sort by spending
     limit_status.sort(key=lambda x: x["spent"], reverse=True)
     
-    # Spending velocity (daily average)
     days_elapsed = len(daily_breakdown)
     daily_avg_expense = summary["expense"] / days_elapsed if days_elapsed > 0 else 0
     
-    # Prediction for month-end
-    total_days_in_month = (datetime(datetime.now().year if month.startswith(datetime.now().strftime("%Y")) else int(month.split('-')[0]), 
-                                   int(month.split('-')[1]), 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    total_days = total_days_in_month.day
-    
-    projected_expense = daily_avg_expense * total_days if daily_avg_expense > 0 else 0
+    # Simplified projection
+    total_days = 30 # Default
+    try:
+        y, m = map(int, month.split('-'))
+        import calendar
+        _, total_days = calendar.monthrange(y, m)
+    except:
+        pass
+        
+    projected_expense = daily_avg_expense * total_days
     
     return {
         "summary": summary,
@@ -279,42 +288,34 @@ def get_detailed_analytics(month=None):
         "weekly_breakdown": weekly_breakdown,
         "limit_status": limit_status,
         "spending_velocity": {
-            "daily_average": daily_avg_expense,
+            "daily_average": float(daily_avg_expense),
             "days_elapsed": days_elapsed,
             "total_days_in_month": total_days,
-            "projected_expense": projected_expense,
+            "projected_expense": float(projected_expense),
             "on_track": projected_expense <= summary["income"] if summary["income"] > 0 else True
         }
     }
 
-
 def get_expense_warnings():
-    """Get all active expense warnings for the user."""
     month = datetime.now().strftime("%Y-%m")
-    db = get_db()
     user_id = g.user["id"]
     
     warnings = []
     limits = fetch_limits()
     summary = fetch_summary(month)
     
-    # Check each limit
     for category, limit in limits.items():
-        spent_row = db.execute("""
-            SELECT COALESCE(SUM(amount), 0) as total
-            FROM transactions 
-            WHERE user_id = ? AND category = ? AND type = 'expense' AND strftime('%Y-%m', date) = ?
-        """, (user_id, category, month)).fetchone()
-        
-        spent = spent_row["total"]
+        spent = db.session.query(db.func.sum(Transaction.amount))\
+            .filter_by(user_id=user_id, category=category, type='expense')\
+            .filter(Transaction.date.like(f"{month}%")).scalar() or 0
         
         if spent > limit:
             warnings.append({
                 "type": "exceeded",
                 "category": category,
                 "limit": limit,
-                "spent": spent,
-                "exceeded_by": spent - limit,
+                "spent": float(spent),
+                "exceeded_by": float(spent - limit),
                 "message": f"⚠️ CRITICAL: {category} limit exceeded! Spent ₹{spent:.2f} of ₹{limit:.2f} limit (₹{spent-limit:.2f} over)"
             })
         elif spent > limit * 0.9:
@@ -322,8 +323,8 @@ def get_expense_warnings():
                 "type": "critical",
                 "category": category,
                 "limit": limit,
-                "spent": spent,
-                "remaining": limit - spent,
+                "spent": float(spent),
+                "remaining": float(limit - spent),
                 "message": f"🔴 CRITICAL: {category} at 90%+! Spent ₹{spent:.2f} of ₹{limit:.2f} (₹{limit-spent:.2f} remaining)"
             })
         elif spent > limit * 0.75:
@@ -331,12 +332,11 @@ def get_expense_warnings():
                 "type": "warning",
                 "category": category,
                 "limit": limit,
-                "spent": spent,
-                "remaining": limit - spent,
+                "spent": float(spent),
+                "remaining": float(limit - spent),
                 "message": f"🟡 WARNING: {category} at 75%! Spent ₹{spent:.2f} of ₹{limit:.2f} (₹{limit-spent:.2f} remaining)"
             })
     
-    # Overall balance warning
     if summary["balance"] < 0:
         warnings.insert(0, {
             "type": "critical",

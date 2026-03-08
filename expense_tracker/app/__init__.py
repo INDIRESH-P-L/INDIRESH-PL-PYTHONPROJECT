@@ -11,7 +11,10 @@ def create_app(config_name="default"):
     app.config.from_object(config[config_name])
 
     # ── Database ──────────────────────────────────────────────────────────────
-    app.teardown_appcontext(close_db)
+    from .extensions import db
+    db.init_app(app)
+    
+    from .database import init_db
     init_db(app)
 
     # ── Blueprints ────────────────────────────────────────────────────────────
