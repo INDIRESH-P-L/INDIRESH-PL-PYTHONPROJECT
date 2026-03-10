@@ -15,12 +15,25 @@ try:
     app = create_app("production")
 except Exception as e:
     print(f"CRITICAL ERROR during app creation: {e}")
-    # Create a dummy app to display the error if possible
     from flask import Flask
     app = Flask(__name__)
-    @app.route("/(.*)")
+    @app.route("/", defaults={"path": ""})
+    @app.route("/health")
+    def health():
+        import os
+        # Only show partials for security
+        db_url = os.environ.get("DATABASE_URL", "NOT FOUND")
+        return {
+            "status": "online",
+            "db_found": db_url != "NOT FOUND",
+            "db_prefix": db_url[:15] if db_url != "NOT FOUND" else None,
+            "groq_found": bool(os.environ.get("GROQ_API_KEY")),
+            "env": os.environ.get("FLASK_ENV", "not_set")
+        }
+    @app.route("/<path:path>")
     def error(path):
-        return f"App Initialization Error: {e}", 500
+        import os
+        return f"Initialization Error: {e}<br><br><b>DEBUG INFO:</b><br>DATABASE_URL Set? {'Yes' if os.environ.get('DATABASE_URL') else 'No'}", 500
 
 # Vercel needs 'app' to be exposed
 app = app
