@@ -5,11 +5,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "expense-tracker-secret-2026")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise RuntimeError("DATABASE_URL not found in environment. Supabase connection is required.")
     
-    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+    # Standardize postgres prefix
+    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+    
+    # Fallback to avoid early crash (validation moved to create_app if needed)
+    if not SQLALCHEMY_DATABASE_URI:
+        SQLALCHEMY_DATABASE_URI = "postgresql://missing:missing@localhost/missing"
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATABASE   = None

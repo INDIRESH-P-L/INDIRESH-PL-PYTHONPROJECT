@@ -26,6 +26,16 @@ def create_app(config_name="default"):
     # ── Page Routes ───────────────────────────────────────────────────────────
     from .auth import login_required
 
+    @app.route("/health")
+    def health():
+        from flask import current_app
+        import os
+        return {
+            "status": "online",
+            "db_found": bool(os.environ.get("DATABASE_URL")),
+            "groq_found": bool(os.environ.get("GROQ_API_KEY"))
+        }
+
     @app.route("/")
     def landing():
         return render_template("landing.html")
