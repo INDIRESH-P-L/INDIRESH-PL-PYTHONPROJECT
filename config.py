@@ -6,13 +6,14 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "expense-tracker-secret-2026")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     
-    # Standardize postgres prefix
+    # 1. Fix prefix for SQLAlchemy 1.4+
     if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     
-    # Fallback to avoid early crash (validation moved to create_app if needed)
+    # 2. Safety fallback to prevent app crash on start
     if not SQLALCHEMY_DATABASE_URI:
-        SQLALCHEMY_DATABASE_URI = "postgresql://missing:missing@localhost/missing"
+        # If missing, use a dummy to allow the health check to load
+        SQLALCHEMY_DATABASE_URI = "postgresql://user:pass@localhost/db"
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATABASE   = None
