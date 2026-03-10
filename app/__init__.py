@@ -28,13 +28,13 @@ def create_app(config_name="default"):
 
     @app.route("/health")
     def health():
-        from flask import current_app
         import os
-        return {
-            "status": "online",
-            "db_found": bool(os.environ.get("DATABASE_URL")),
-            "groq_found": bool(os.environ.get("GROQ_API_KEY"))
-        }
+        return f"Status: Online | DB_URL_SET: {bool(os.environ.get('DATABASE_URL'))}"
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        import traceback
+        return f"<h3>TrackEx Error Debugger</h3><pre>{traceback.format_exc()}</pre>", 500
 
     @app.route("/")
     def landing():
