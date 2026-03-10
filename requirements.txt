@@ -1,0 +1,6 @@
+Flask
+requests
+python-dotenv
+waitress
+flask-sqlalchemy
+psycopg2-binary

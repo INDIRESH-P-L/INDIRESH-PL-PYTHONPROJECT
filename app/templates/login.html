@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — TrackEx</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #ede9fe 0%, #e0f2fe 50%, #fce7f3 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .auth-container {
+            display: flex;
+            min-height: 100vh;
+            width: 100vw;
+            opacity: 0;
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .fade-out-page {
+            animation: pageFadeOut 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+
+        @keyframes pageFadeOut {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+        }
+
+        /* LEFT SIDE - VISUALS */
+        .auth-visual {
+            flex: 1.2;
+            position: relative;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.9) 0%, rgba(99, 102, 241, 0.9) 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            animation: slideInLeft 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .auth-visual::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2574&auto=format&fit=crop') center/cover;
+            opacity: 0.3;
+            mix-blend-mode: overlay;
+        }
+
+        /* Animated backdrop glass elements */
+        .glass-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.8;
+            background-size: 200% 200%;
+        }
+
+        .blob-1 {
+            top: -10%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+            animation: float-blob 12s infinite alternate ease-in-out, blob-grad-shift 8s ease infinite;
+        }
+
+        .blob-2 {
+            bottom: -10%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6);
+            animation: float-blob 15s infinite alternate ease-in-out, blob-grad-shift 10s ease infinite;
+            animation-delay: -5s;
+        }
+
+        .blob-3 {
+            top: 40%;
+            left: 30%;
+            width: 300px;
+            height: 300px;
+            opacity: 0.5;
+            background: linear-gradient(135deg, #10b981, #06b6d4, #3b82f6);
+            animation: float-blob 10s infinite alternate ease-in-out, blob-grad-shift 12s ease infinite;
+            animation-delay: -2s;
+        }
+
+        @keyframes blob-grad-shift {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes float-blob {
+            0% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(50px, 50px) scale(1.1) rotate(10deg);
+            }
+        }
+
+        .visual-content {
+            position: relative;
+            z-index: 10;
+            text-align: left;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 520px;
+            transform: translateY(0);
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.6s ease;
+        }
+
+        .visual-content:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 35px 65px -12px rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .visual-content h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            line-height: 1.1;
+            transition: transform 0.5s ease;
+        }
+
+        .visual-content p {
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.7;
+            font-weight: 300;
+            margin-bottom: 30px;
+        }
+
+        /* Hover Quotes Effect */
+        .quote-wrapper {
+            position: relative;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .quote-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 24px 30px 24px 44px;
+            border-radius: 20px;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            transform-style: preserve-3d;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quote-wrapper:hover .quote-card {
+            transform: translateY(-5px) rotateX(4deg) rotateY(-4deg);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 15px 15px 35px rgba(0, 0, 0, 0.2),
+                -5px -5px 15px rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .quote-icon {
+            font-family: 'Outfit', sans-serif;
+            font-size: 4.5rem;
+            color: rgba(255, 255, 255, 0.1);
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            line-height: 1;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            pointer-events: none;
+        }
+
+        .quote-wrapper:hover .quote-icon {
+            color: rgba(6, 182, 212, 0.6);
+            /* Cyan glow */
+            transform: scale(1.1) rotate(-10deg);
+        }
+
+        .quote-text {
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-style: italic;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            transition: color 0.4s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .quote-wrapper:hover .quote-text {
+            color: #ffffff;
+        }
+
+        .quote-author {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.4s ease;
+            display: inline-block;
+        }
+
+        .quote-wrapper:hover .quote-author {
+            color: #6366f1;
+            /* Indigo accent */
+            transform: translateX(5px);
+        }
+
+        .quote-card::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #06b6d4;
+            opacity: 0;
+            box-shadow: 0 0 10px #06b6d4, 0 0 20px #06b6d4;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: scale(0);
+        }
+
+        .quote-wrapper:hover .quote-card::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* RIGHT SIDE - FORM */
+        .auth-form-wrapper {
+            flex: 1;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            animation: slideInRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            animation-delay: 0.1s;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 440px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 48px 40px;
+            border-radius: 28px;
+            box-shadow: 0 12px 50px rgba(124, 58, 237, 0.12), 0 4px 20px rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(124, 58, 237, 0.12);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        .auth-card:hover {
+            box-shadow: 0 20px 60px rgba(124, 58, 237, 0.16);
+        }
+
+        .auth-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .auth-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            font-size: 0.95rem;
+        }
+
+        .auth-links {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .auth-links a {
+            color: var(--purple);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s, transform 0.2s;
+            display: inline-block;
+        }
+
+        .auth-links a:hover {
+            color: var(--indigo);
+            transform: translateY(-1px);
+        }
+
+        .flash {
+            background: var(--red-dim);
+            color: var(--red);
+            padding: 12px;
+            border-radius: var(--r-sm);
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            text-align: center;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            animation: slide-down 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slide-down {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .field {
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .field:focus-within {
+            transform: translateY(-2px);
+        }
+
+        .field label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: color 0.3s ease;
+        }
+
+        .field:focus-within label {
+            color: var(--purple);
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1.5px solid rgba(99, 102, 241, 0.2);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            color: #1e1b4b;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .field input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .field input:focus::placeholder {
+            opacity: 0.4;
+        }
+
+        .field input:focus {
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+            border-color: #7c3aed;
+            outline: none;
+        }
+
+        .btn-add {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-add::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn-add:hover {
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+            transform: translateY(-3px);
+            filter: brightness(1.05);
+        }
+
+        .btn-add:hover::before {
+            left: 100%;
+        }
+
+        .btn-add:active {
+            transform: translateY(0);
+        }
+
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn-google:hover {
+            background: var(--bg-input);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+            border-color: var(--border-strong);
+        }
+
+        .btn-google:active {
+            transform: translateY(0);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 28px 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-default);
+        }
+
+        .divider:not(:empty):before {
+            margin-right: 15px;
+        }
+
+        .divider:not(:empty):after {
+            margin-left: 15px;
+        }
+
+        @media (max-width: 900px) {
+            .auth-visual {
+                display: none;
+            }
+
+            .auth-form-wrapper {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <!-- Left Side: Visuals -->
+        <div class="auth-visual">
+            <div class="glass-blob blob-1"></div>
+            <div class="glass-blob blob-2"></div>
+            <div class="glass-blob blob-3"></div>
+            <div class="visual-content">
+                <h1>Welcome to <br />TrackEx</h1>
+                <p>Take control of your finances with our intuitive and powerful dashboard. Your journey towards better
+                    financial health starts here.</p>
+
+                <!-- Hover Quote Feature -->
+                <div class="quote-wrapper">
+                    <div class="quote-card">
+                        <span class="quote-icon">"</span>
+                        <p class="quote-text">Beware of little expenses; a small leak will sink a great ship.</p>
+                        <span class="quote-author">Benjamin Franklin</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Side: Form -->
+        <div class="auth-form-wrapper">
+            <div class="auth-card">
+                <h2 class="auth-title">Welcome Back 👋</h2>
+                <p class="auth-subtitle">Log in to your account to continue</p>
+
+                {% for message in get_flashed_messages() %}
+                <div class="flash">{{ message }}</div>
+                {% endfor %}
+
+                <form method="post">
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <input type="text" name="username" id="username" placeholder="Enter your username" required>
+                    </div>
+                    <div class="field" style="margin-bottom:28px">
+                        <label for="password">Password</label>
+                        <input type="password" name="password" id="password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn-add">Sign In</button>
+                </form>
+
+                <div class="divider">or</div>
+
+                <a href="{{ url_for('auth.google_login') }}" class="btn-google">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google"
+                        style="width: 22px; height: 22px;">
+                    Sign in with Google
+                </a>
+
+                <div class="auth-links">
+                    Don't have an account? <a href="{{ url_for('auth.register') }}">Create an account</a><br><br>
+                    <a href="{{ url_for('landing') }}"
+                        style="color: var(--text-muted); opacity: 0.7; font-weight: normal; font-size: 0.85rem;">← Back
+                        to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+                link.addEventListener('click', e => {
+                    const href = link.getAttribute('href');
+                    if (href && !href.startsWith('#') && !link.getAttribute('target')) {
+                        e.preventDefault();
+                        document.querySelector('.auth-container').classList.add('fade-out-page');
+                        setTimeout(() => {
+                            window.location = link.href;
+                        }, 400);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
