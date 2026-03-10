@@ -10,8 +10,17 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Create the app instance for Vercel
-app = create_app("production")
+try:
+    # Create the app instance for Vercel
+    app = create_app("production")
+except Exception as e:
+    print(f"CRITICAL ERROR during app creation: {e}")
+    # Create a dummy app to display the error if possible
+    from flask import Flask
+    app = Flask(__name__)
+    @app.route("/(.*)")
+    def error(path):
+        return f"App Initialization Error: {e}", 500
 
 # Vercel needs 'app' to be exposed
 app = app
