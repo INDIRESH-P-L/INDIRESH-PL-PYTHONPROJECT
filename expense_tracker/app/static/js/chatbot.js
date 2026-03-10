@@ -112,15 +112,7 @@ if (form) {
   });
 }
 
-// ── Keyboard shortcut: Enter to send ─────────────────────────────────────────
-if (input) {
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(input.value.trim());
-    }
-  });
-}
+// (Redundant keydown listener removed — form submit handles Enter)
 
 // ── Welcome message ───────────────────────────────────────────────────────────
 appendMessage('🚀 **Full Control AI Active!**\n\nI can now manage your finances directly. Try these commands:\n• **"Add expense 500 Food"**\n• **"Add income 25000"**\n• **"Delete my last transaction"**\n• **"What is my balance?"**\n• **"Set limit Food 5000"**\n\nHow can I help you take control of your money today?');

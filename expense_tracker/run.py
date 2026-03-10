@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Load env variables from .env if present
 load_dotenv()
-print(f"DEBUG: GEMINI_API_KEY loaded? {'Yes' if os.environ.get('GEMINI_API_KEY') else 'No'}")
+print(f"DEBUG: GROQ_API_KEY loaded? {'Yes' if os.environ.get('GROQ_API_KEY') else 'No'}")
 
 env = os.environ.get("FLASK_ENV", "development")
 app = create_app(env)
