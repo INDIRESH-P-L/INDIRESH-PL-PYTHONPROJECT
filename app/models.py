@@ -90,16 +90,28 @@ def fetch_summary(month=None):
     # Monthly trend (last 6 months) - SQLAlchemy version
     # Note: strftime is SQLite specific, for Postgres we'll need to adapt or use cross-compatible logic
     # For now, let's try to stick to something that works on both if possible, or check engine type
+    engine_name = db.engine.name
     
-    trend_query = db.session.query(
-        db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM').label('month'),
-        db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
-        db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
-    ).filter_by(user_id=user_id)
+    if engine_name == 'sqlite':
+        trend_query = db.session.query(
+            db.func.strftime('%Y-%m', Transaction.date).label('month'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id)
+        
+        trend = trend_query.group_by(
+            db.func.strftime('%Y-%m', Transaction.date)
+        ).order_by(db.desc('month')).limit(6).all()
+    else:
+        trend_query = db.session.query(
+            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM').label('month'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id)
 
-    trend = trend_query.group_by(
-        db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM')
-    ).order_by(db.desc('month')).limit(6).all()
+        trend = trend_query.group_by(
+            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM')
+        ).order_by(db.desc('month')).limit(6).all()
 
     return {
         "income": float(income),
@@ -215,13 +227,21 @@ def get_detailed_analytics(month=None):
     
     daily_breakdown = [{"date": r.date, "income": float(r.income), "expense": float(r.expense)} for r in daily_rows]
     
-    # Weekly breakdown (Postgres/Supabase only)
-    weekly_rows = db.session.query(
-        db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW').label('week'),
-        db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
-        db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
-    ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
-    .group_by(db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW')).order_by('week').all()
+    engine_name = db.engine.name
+    if engine_name == 'sqlite':
+        weekly_rows = db.session.query(
+            db.func.strftime('%W', Transaction.date).label('week'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
+        .group_by(db.func.strftime('%W', Transaction.date)).order_by('week').all()
+    else:
+        weekly_rows = db.session.query(
+            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW').label('week'),
+            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
+            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
+        ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
+        .group_by(db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW')).order_by('week').all()
         
     weekly_breakdown = [{"week": r.week, "income": float(r.income), "expense": float(r.expense)} for r in weekly_rows]
     

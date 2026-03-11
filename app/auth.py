@@ -10,7 +10,7 @@ auth = Blueprint("auth", __name__, url_prefix="/auth")
 @auth.route("/google/login")
 def google_login():
     client_id = current_app.config['GOOGLE_CLIENT_ID']
-    redirect_uri = url_for('auth.google_callback', _external=True)
+    redirect_uri = current_app.config.get('GOOGLE_REDIRECT_URI', url_for('auth.google_callback', _external=True))
     scope = 'openid email profile'
     response_type = 'code'
     google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={redirect_uri}&response_type={response_type}&scope={scope}"
@@ -25,7 +25,7 @@ def google_callback():
         
     client_id = current_app.config['GOOGLE_CLIENT_ID']
     client_secret = current_app.config['GOOGLE_CLIENT_SECRET']
-    redirect_uri = url_for('auth.google_callback', _external=True)
+    redirect_uri = current_app.config.get('GOOGLE_REDIRECT_URI', url_for('auth.google_callback', _external=True))
     
     token_url = "https://oauth2.googleapis.com/token"
     token_data = {

@@ -24,9 +24,10 @@ class Config:
                         encoded_password = quote_plus(password)
                         SQLALCHEMY_DATABASE_URI = f"{parts[0]}://{user}:{encoded_password}@{host_info}"
     
-    # 3. Safety fallback to prevent app crash on start
+    # 3. Safety fallback to prevent app crash on start if DB drops out
     if not SQLALCHEMY_DATABASE_URI:
-        SQLALCHEMY_DATABASE_URI = "postgresql://user:pass@localhost/db"
+        # Fall back to a local SQLite database for local testing
+        SQLALCHEMY_DATABASE_URI = "sqlite:///local_fallback.db"
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATABASE   = None
@@ -34,6 +35,7 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "YOUR_GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "YOUR_GOOGLE_CLIENT_SECRET")
     GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+    GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5001/auth/google/callback")
 
 class DevelopmentConfig(Config):
     DEBUG = True
