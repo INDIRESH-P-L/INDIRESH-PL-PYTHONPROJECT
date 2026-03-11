@@ -6,11 +6,12 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-from app import create_app
 from dotenv import load_dotenv
-
-# Load env variables from .env if present
+# Load env variables from .env BEFORE importing anything from the app
 load_dotenv()
+
+from app import create_app
+
 print(f"DEBUG: GROQ_API_KEY loaded? {'Yes' if os.environ.get('GROQ_API_KEY') else 'No'}")
 
 env = os.environ.get("FLASK_ENV", "development")
