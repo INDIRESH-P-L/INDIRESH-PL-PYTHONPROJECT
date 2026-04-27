@@ -9,6 +9,12 @@ class User(db.Model):
     password = db.Column(db.String(200))
     google_id = db.Column(db.String(100), unique=True)
     email = db.Column(db.String(120), unique=True)
+    full_name = db.Column(db.String(100))
+    bio = db.Column(db.Text)
+    phone = db.Column(db.String(20))
+    avatar_url = db.Column(db.String(255))
+    currency = db.Column(db.String(10), default='INR')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     transactions = db.relationship('Transaction', backref='user', lazy=True)
     limits = db.relationship('Limit', backref='user', lazy=True)
@@ -87,38 +93,30 @@ def fetch_summary(month=None):
     
     cat_rows = cat_query.group_by(Transaction.category).order_by(db.desc('total')).all()
     
-    # Monthly trend (last 6 months) - SQLAlchemy version
-    # Note: strftime is SQLite specific, for Postgres we'll need to adapt or use cross-compatible logic
-    # For now, let's try to stick to something that works on both if possible, or check engine type
-    engine_name = db.engine.name
+    # Monthly trend (last 6 months)
+    trend_dict = {}
+    all_trans = Transaction.query.filter_by(user_id=user_id).all()
     
-    if engine_name == 'sqlite':
-        trend_query = db.session.query(
-            db.func.strftime('%Y-%m', Transaction.date).label('month'),
-            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
-            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
-        ).filter_by(user_id=user_id)
+    for trans in all_trans:
+        month_key = trans.date[:7] if len(trans.date) >= 7 else trans.date
+        if month_key not in trend_dict:
+            trend_dict[month_key] = {"income": 0, "expense": 0}
         
-        trend = trend_query.group_by(
-            db.func.strftime('%Y-%m', Transaction.date)
-        ).order_by(db.desc('month')).limit(6).all()
-    else:
-        trend_query = db.session.query(
-            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM').label('month'),
-            db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
-            db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
-        ).filter_by(user_id=user_id)
-
-        trend = trend_query.group_by(
-            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM')
-        ).order_by(db.desc('month')).limit(6).all()
+        if trans.type == 'income':
+            trend_dict[month_key]['income'] += trans.amount
+        else:
+            trend_dict[month_key]['expense'] += trans.amount
+    
+    sorted_months = sorted(trend_dict.keys(), reverse=True)[:6]
+    trend = [{"month": m, "income": float(trend_dict[m]['income']), "expense": float(trend_dict[m]['expense'])} 
+             for m in sorted(sorted_months)]
 
     return {
         "income": float(income),
         "expense": float(expense),
         "balance": float(income - expense),
         "categories": [{"category": r.category, "total": float(r.total)} for r in cat_rows],
-        "trend": [{"month": r.month, "income": float(r.income), "expense": float(r.expense)} for r in reversed(trend)],
+        "trend": trend,
     }
 
 def insert_transaction(tx_type, category, amount, note, date):
@@ -143,14 +141,14 @@ def delete_transaction(tx_id):
 
 def fetch_available_months():
     user_id = g.user["id"]
-    engine_name = db.engine.name
-    if engine_name == 'sqlite':
-        rows = db.session.query(db.func.strftime('%Y-%m', Transaction.date).label('m'))\
-            .filter_by(user_id=user_id).distinct().order_by(db.desc('m')).all()
-    else:
-        rows = db.session.query(db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'YYYY-MM').label('m'))\
-            .filter_by(user_id=user_id).distinct().order_by(db.desc('m')).all()
-    return [r.m for r in rows]
+    # Use Python to extract months from dates, works universally
+    rows = db.session.query(Transaction.date).filter_by(user_id=user_id).all()
+    months = set()
+    for row in rows:
+        if row.date and len(row.date) >= 7:
+            month = row.date[:7]
+            months.add(month)
+    return sorted(list(months), reverse=True)
 
 def set_limit(category, limit_amount):
     user_id = g.user["id"]
@@ -237,11 +235,11 @@ def get_detailed_analytics(month=None):
         .group_by(db.func.strftime('%W', Transaction.date)).order_by('week').all()
     else:
         weekly_rows = db.session.query(
-            db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW').label('week'),
+            db.func.strftime('%W', Transaction.date).label('week'),
             db.func.sum(db.case((Transaction.type == 'income', Transaction.amount), else_=0)).label('income'),
             db.func.sum(db.case((Transaction.type == 'expense', Transaction.amount), else_=0)).label('expense')
         ).filter_by(user_id=user_id).filter(Transaction.date.like(f"{month}%"))\
-        .group_by(db.func.to_char(db.func.to_date(Transaction.date, 'YYYY-MM-DD'), 'WW')).order_by('week').all()
+        .group_by(db.func.strftime('%W', Transaction.date)).order_by('week').all()
         
     weekly_breakdown = [{"week": r.week, "income": float(r.income), "expense": float(r.expense)} for r in weekly_rows]
     

@@ -1,11 +1,36 @@
 import functools
+import re
+import secrets
 import requests
+from datetime import datetime, timedelta
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for, jsonify, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
 from .extensions import db
 from .models import User
+from app import limiter
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
+
+def _regenerate_session():
+    """Regenerate session to prevent session fixation attacks."""
+    old_data = dict(session)
+    session.clear()
+    session.modified = True
+    for key, value in old_data.items():
+        if key != "user_id":  # Don't copy old user_id
+            session[key] = value
+
+def validate_password_strength(password):
+    """Validate password meets security requirements."""
+    if len(password) < 8:
+        return "Password must be at least 8 characters."
+    if not re.search(r"[A-Z]", password):
+        return "Password must contain an uppercase letter."
+    if not re.search(r"[a-z]", password):
+        return "Password must contain a lowercase letter."
+    if not re.search(r"\d", password):
+        return "Password must contain a number."
+    return None
 
 @auth.route("/google/login")
 def google_login():
@@ -69,11 +94,14 @@ def google_callback():
             db.session.add(user)
             db.session.commit()
 
-    session.clear()
+    # Security: Regenerate session after login
+    _regenerate_session()
     session["user_id"] = user.id
+    session.permanent = True  # Use PERMANENT_SESSION_LIFETIME
     return redirect(url_for("index"))
 
 @auth.route("/register", methods=("GET", "POST"))
+@limiter.limit("5 per minute")
 def register():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -82,8 +110,15 @@ def register():
 
         if not username:
             error = "Username is required."
+        elif len(username) < 3:
+            error = "Username must be at least 3 characters."
         elif not password:
             error = "Password is required."
+        else:
+            # Validate password strength
+            password_error = validate_password_strength(password)
+            if password_error:
+                error = password_error
 
         if error is None:
             try:
@@ -101,6 +136,7 @@ def register():
     return render_template("register.html")
 
 @auth.route("/login", methods=("GET", "POST"))
+@limiter.limit("10 per minute")
 def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -108,14 +144,15 @@ def login():
         error = None
         user = User.query.filter_by(username=username).first()
 
-        if user is None:
-            error = "Incorrect username."
-        elif not user.password or not check_password_hash(user.password, password):
-            error = "Incorrect password."
+        # Security: Use generic error message to prevent user enumeration
+        if user is None or not user.password or not check_password_hash(user.password, password):
+            error = "Invalid username or password."
 
         if error is None:
-            session.clear()
+            # Security: Regenerate session after login
+            _regenerate_session()
             session["user_id"] = user.id
+            session.permanent = True  # Use PERMANENT_SESSION_LIFETIME
             return redirect(url_for("index"))
 
         flash(error)

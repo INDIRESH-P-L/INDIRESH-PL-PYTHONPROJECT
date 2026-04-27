@@ -4,3 +4,8 @@ python-dotenv
 waitress
 flask-sqlalchemy
 psycopg2-binary
+werkzeug
+SQLAlchemy
+flask-talisman
+flask-wtf
+flask-limiter

@@ -74,6 +74,7 @@ function renderSuggestions() {
 // ── Send a message ────────────────────────────────────────────────────────────
 async function sendMessage(text) {
   if (!text.trim()) return;
+  
   appendMessage(text, 'user');
   input.value = '';
 
@@ -91,16 +92,29 @@ async function sendMessage(text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text })
     });
+    
     const data = await res.json();
     loadingMsg.remove();
 
-    if (data.reply) appendMessage(data.reply);
-    else if (data.error) appendMessage('❌ ' + data.error);
-    else appendMessage('I received an empty response. Please try again.');
+    if (res.status === 401) {
+      appendMessage('❌ **Session Expired**: Please log in again to continue chatting.');
+      setTimeout(() => window.location.href = '/auth/login', 2000);
+    } else if (data.reply) {
+      appendMessage(data.reply);
+    } else if (data.error) {
+      appendMessage('❌ **Error**: ' + (data.error || 'Unknown error occurred'));
+    } else {
+      appendMessage('⚠️ **Unexpected Response**: The server returned empty data. Please try again.');
+    }
   } catch (err) {
     loadingMsg.remove();
-    appendMessage('⚠️ Unable to reach the server. Please ensure the application is running.');
     console.error('Chat fetch error:', err);
+    
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      appendMessage('⚠️ **Connection Failed**: Unable to reach the server. Please ensure:\n1. The application is running\n2. You have an internet connection\n3. Try refreshing the page');
+    } else {
+      appendMessage(`⚠️ **Error**: ${err.message || 'An unexpected error occurred'}`);
+    }
   }
 }
 
@@ -115,6 +129,6 @@ if (form) {
 // (Redundant keydown listener removed — form submit handles Enter)
 
 // ── Welcome message ───────────────────────────────────────────────────────────
-appendMessage('🚀 **Full Control AI Active!**\n\nI can now manage your finances directly. Try these commands:\n• **"Add expense 500 Food"**\n• **"Add income 25000"**\n• **"Delete my last transaction"**\n• **"What is my balance?"**\n• **"Set limit Food 5000"**\n\nHow can I help you take control of your money today?');
+appendMessage('🚀 **TrackEx AI Assistant Active!**\n\nI can manage your finances directly. Try these commands:\n• **"Add expense 500 Food"**\n• **"Add income 25000"**\n• **"Delete my last transaction"**\n• **"What is my balance?"**\n• **"Set limit Food 5000"**\n• **"Analyze my spending"**\n\n✨ How can I help you today?');
 renderSuggestions();
-console.log('TrackEx Brain V2 initialized ✓');
+console.log('TrackEx AI Assistant V2 initialized successfully ✓');

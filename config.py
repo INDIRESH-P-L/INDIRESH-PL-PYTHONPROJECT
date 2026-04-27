@@ -1,9 +1,23 @@
 import os
+import secrets
+from datetime import timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "expense-tracker-secret-2026")
+    # Security: Require SECRET_KEY in production, generate secure fallback for dev
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        if os.environ.get("FLASK_ENV") == "production":
+            raise RuntimeError("SECRET_KEY environment variable must be set in production")
+        # Generate a secure random key for development
+        SECRET_KEY = secrets.token_hex(32)
+
+    # Session security
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
+    SESSION_COOKIE_SECURE = True  # Only sent over HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Not accessible via JavaScript
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     
     if SQLALCHEMY_DATABASE_URI:
@@ -39,9 +53,12 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    # Relax cookie security for local development (HTTP)
+    SESSION_COOKIE_SECURE = False
 
 class ProductionConfig(Config):
     DEBUG = False
+    # All security settings inherited from base Config
 
 config = {
     "development": DevelopmentConfig,

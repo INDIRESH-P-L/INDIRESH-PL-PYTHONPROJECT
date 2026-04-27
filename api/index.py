@@ -36,7 +36,9 @@ except Exception as e:
     @app.route("/<path:path>")
     def error(path):
         import os
-        return f"Initialization Error: {e}<br><br><b>DEBUG INFO:</b><br>DATABASE_URL Set? {'Yes' if os.environ.get('DATABASE_URL') else 'No'}", 500
+        if os.environ.get("FLASK_ENV") == "development":
+            return f"Initialization Error: {e}<br><br><b>DEBUG INFO:</b><br>DATABASE_URL Set? {'Yes' if os.environ.get('DATABASE_URL') else 'No'}", 500
+        return "Internal Server Error", 500
 
 # Vercel needs 'app' to be exposed
 app = app

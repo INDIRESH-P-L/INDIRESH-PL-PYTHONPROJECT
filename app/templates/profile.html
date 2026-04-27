@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile — TrackEx</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👤</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .profile-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-md);
+        }
+
+        .profile-avatar-wrap {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            background: var(--bg-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .profile-avatar-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-info h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .profile-info p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 24px;
+        }
+
+        .profile-form-card {
+            background: var(--bg-surface);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .profile-stats-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mini-stat {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 18px;
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+
+        .mini-stat-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--purple);
+        }
+
+        .mini-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1.5px solid var(--border-default);
+            background: var(--bg-input);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--purple);
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+        }
+
+        .btn-save {
+            background: var(--grad-main);
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(124, 58, 237, 0.2);
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(124, 58, 237, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--purple);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <aside class="sidebar" role="navigation">
+            <div class="sidebar-brand">
+                <span class="brand-icon">💰</span>
+                <h1>TrackEx</h1>
+                <p>Smart Finance Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-label">Navigation</div>
+                <a href="{{ url_for('index') }}" class="nav-item">
+                    <span class="nav-icon">📊</span> Dashboard
+                </a>
+                <a href="{{ url_for('index') }}#timeline-section" class="nav-item">
+                    <span class="nav-icon">📆</span> Timeline
+                </a>
+                <div class="nav-item active">
+                    <span class="nav-icon">👤</span> Profile Settings
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+                    <span style="color: var(--text-primary); font-weight: 600;">👤 {{ user['username'] }}</span>
+                    <a href="{{ url_for('auth.logout') }}" style="color: var(--red); text-decoration: none; font-size: 0.8rem; font-weight: 600;">Logout</a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <div class="topbar-title">👤 User Profile</div>
+                <div class="topbar-right">
+                    <div class="topbar-date" id="topbar-date"></div>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="profile-container">
+                    <a href="{{ url_for('index') }}" class="back-link">
+                        <span>←</span> Back to Dashboard
+                    </a>
+
+                    <div class="profile-header">
+                        <div class="profile-avatar-wrap" id="avatar-container">
+                            <span id="avatar-emoji">👤</span>
+                        </div>
+                        <div class="profile-info">
+                            <h1 id="header-name">{{ user['username'] }}</h1>
+                            <p id="header-email">{{ user['email'] or 'No email provided' }}</p>
+                            <p id="header-joined" style="font-size: 0.85rem; margin-top: 5px; opacity: 0.7;">Member since ...</p>
+                        </div>
+                    </div>
+
+                    <div class="profile-grid">
+                        <div class="profile-form-card">
+                            <form id="profile-form">
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input type="text" id="full_name" class="form-control" placeholder="e.g. John Doe">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bio</label>
+                                    <textarea id="bio" class="form-control" rows="3" placeholder="Tell us about yourself..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" id="phone" class="form-control" placeholder="+91 98765 43210">
+                                </div>
+                                <div class="form-group">
+                                    <label>Avatar URL</label>
+                                    <input type="url" id="avatar_url" class="form-control" placeholder="https://example.com/photo.jpg">
+                                </div>
+                                <div class="form-group">
+                                    <label>Default Currency</label>
+                                    <select id="currency" class="form-control">
+                                        <option value="INR">INR (₹)</option>
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                        <option value="JPY">JPY (¥)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn-save" id="save-btn">Save Changes</button>
+                            </form>
+                        </div>
+
+                        <div class="profile-stats-card">
+                            <div class="mini-stat">
+                                <div class="mini-stat-val" id="stat-transactions">0</div>
+                                <div class="mini-stat-label">Transactions</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-val" id="stat-balance">₹0.00</div>
+                                <div class="mini-stat-label">Net Balance</div>
+                            </div>
+                            <div class="mini-stat" style="background: var(--grad-gold); color: white;">
+                                <div class="mini-stat-val" style="color: white;">PRO</div>
+                                <div class="mini-stat-label" style="color: rgba(255,255,255,0.8);">Account Status</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" role="alert" aria-live="polite" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e1b4b; color: white; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: none; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"></div>
+
+    <script>
+        // Set date
+        const now = new Date();
+        document.getElementById('topbar-date').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/user/profile');
+                const data = await res.json();
+                
+                document.getElementById('full_name').value = data.full_name || '';
+                document.getElementById('bio').value = data.bio || '';
+                document.getElementById('phone').value = data.phone || '';
+                document.getElementById('avatar_url').value = data.avatar_url || '';
+                document.getElementById('currency').value = data.currency || 'INR';
+                
+                if (data.full_name) {
+                    document.getElementById('header-name').textContent = data.full_name;
+                }
+                
+                if (data.created_at) {
+                    document.getElementById('header-joined').textContent = `Member since ${data.created_at}`;
+                }
+                
+                if (data.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = data.avatar_url;
+                    img.onerror = () => { img.style.display = 'none'; document.getElementById('avatar-emoji').style.display = 'block'; };
+                    img.onload = () => { document.getElementById('avatar-emoji').style.display = 'none'; };
+                    const container = document.getElementById('avatar-container');
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                }
+
+                // Load stats
+                const summaryRes = await fetch('/api/summary');
+                const summary = await summaryRes.json();
+                document.getElementById('stat-balance').textContent = `${data.currency === 'INR' ? '₹' : (data.currency === 'USD' ? '$' : data.currency)} ${summary.balance.toLocaleString()}`;
+                
+                const txRes = await fetch('/api/transactions?limit=1000');
+                const txs = await txRes.json();
+                document.getElementById('stat-transactions').textContent = txs.length;
+
+            } catch (err) {
+                console.error('Failed to load profile:', err);
+            }
+        }
+
+        document.getElementById('profile-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const payload = {
+                full_name: document.getElementById('full_name').value,
+                bio: document.getElementById('bio').value,
+                phone: document.getElementById('phone').value,
+                avatar_url: document.getElementById('avatar_url').value,
+                currency: document.getElementById('currency').value
+            };
+
+            try {
+                const res = await fetch('/api/user/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    showToast('Profile updated successfully! ✨');
+                    loadProfile();
+                } else {
+                    showToast('Error updating profile. ❌');
+                }
+            } catch (err) {
+                showToast('Network error. ❌');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            }
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        loadProfile();
+    </script>
+</body>
+
+</html>

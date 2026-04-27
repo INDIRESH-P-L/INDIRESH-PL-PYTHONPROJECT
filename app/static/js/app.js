@@ -60,12 +60,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateCats('income');
     await loadMonths();
     await refreshAll();
+    await initTimelineChart();
     bindEvents();
 
-    // Auto-refresh every 30 seconds for real-time analytics
+    // Auto-refresh every 120 seconds for real-time analytics
     setInterval(async () => {
         await refreshAll();
-    }, 30000);
+    }, 120000);
 });
 
 // ── Event wiring ───────────────────────────────────────────────────────────────
@@ -177,6 +178,7 @@ async function refreshAll() {
     renderDonut();
     renderTrend();
     renderCatBars();
+    renderTopCategory();
 
     // Render analytics cards
     renderAnalyticsCards();
@@ -212,8 +214,14 @@ async function refreshAll() {
 
     // Render warnings badge if there are any
     renderWarningsIndicator();
-
     await loadMonths();
+
+    // REAL-TIME: Automatically keep Timeline in sync if it exists
+    if (typeof loadTimelineData === 'function') {
+        const from = ($('tl-from') || {}).value || '';
+        const to   = ($('tl-to')   || {}).value || '';
+        await loadTimelineData(from, to);
+    }
 }
 
 // ── Stat cards ─────────────────────────────────────────────────────────────────
@@ -225,6 +233,35 @@ function renderStats() {
 
     const balEl = $('stat-balance');
     balEl.className = 'stat-value ' + (balance >= 0 ? 'positive' : 'negative');
+    
+    // Mini avatar update
+    updateMiniAvatar();
+}
+
+async function updateMiniAvatar() {
+    try {
+        const res = await fetch('/api/user/profile');
+        const data = await res.json();
+        const miniAvatar = $('user-avatar-mini');
+        if (miniAvatar && data.avatar_url) {
+            miniAvatar.innerHTML = `<img src="${data.avatar_url}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;" onerror="this.parentElement.innerHTML='👤'">`;
+        }
+    } catch (e) {}
+}
+
+function renderTopCategory() {
+    const cats = state.summary.categories;
+    const topCatEl = $('stat-top-category');
+    const topAmtEl = $('stat-top-amount');
+    
+    if (cats && cats.length > 0) {
+        const top = cats[0];
+        if (topCatEl) topCatEl.textContent = `${CAT_ICON[top.category] || ''} ${top.category}`;
+        if (topAmtEl) topAmtEl.textContent = `Spent ${fmt(top.total)} this month`;
+    } else {
+        if (topCatEl) topCatEl.textContent = '—';
+        if (topAmtEl) topAmtEl.textContent = 'No expenses this month';
+    }
 }
 
 function animateValue(el, target) {
@@ -392,7 +429,6 @@ async function handleSubmit(e) {
         } else {
             toast('Transaction added!', 'success');
         }
-        $('tx-amount').value = '';
         $('tx-note').value = '';
         state.month = '';
         $('month-select').value = '';
@@ -651,13 +687,18 @@ async function saveLimit(category) {
 async function api(url, opts = {}, fallback = {}) {
     try {
         const r = await fetch(url, opts);
-        if (!r.ok && opts.method !== 'DELETE') {
-            // Surface server errors so callers can show error toast
-            return await r.json().catch(() => fallback);
+        if (r.status === 401) {
+            window.location.href = '/auth/login';
+            return fallback;
+        }
+        if (!r.ok) {
+            const data = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+            return data;
         }
         return await r.json();
     } catch (err) {
         console.error('[API] fetch error:', url, err);
+        toast('Network error — please check your connection', 'error');
         return fallback;
     }
 }
@@ -667,8 +708,8 @@ function fmt(n) {
 }
 
 function fmtShort(n) {
-    if (n >= 1e6) return '₹' + (n / 1e6).toFixed(1) + 'M';
-    if (n >= 1e3) return '₹' + (n / 1e3).toFixed(0) + 'K';
+    if (n >= 1e6) return '₹' + (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e3) return '₹' + (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
     return '₹' + n;
 }
 
@@ -761,4 +802,271 @@ function showWarningsModal() {
     html += '</div>';
 
     alert(`📊 EXPENSE ALERTS (${warnings.length} total)\n\n${warnings.map(w => w.message).join('\n\n')}`);
+}
+
+// ── Expense Timeline Chart ─────────────────────────────────────────────────────
+
+let timelineChart = null;
+
+/**
+ * Called on DOMContentLoaded. Loads all data and renders the timeline.
+ * Also wires Enter key on the date inputs.
+ */
+async function initTimelineChart() {
+    const res = await api('/api/user/created_at', {}, { created_at: '' });
+    const today = new Date().toISOString().slice(0, 10);
+    const fromDate = res.created_at || today;
+    const toDate = today;
+
+    const fromEl = $('tl-from');
+    const toEl = $('tl-to');
+    if (fromEl) fromEl.value = fromDate;
+    if (toEl) toEl.value = toDate;
+
+    await loadTimelineData(fromDate, toDate);
+
+    // Allow pressing Enter in either date field to apply
+    ['tl-from', 'tl-to'].forEach(id => {
+        const el = $(id);
+        if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') applyTimelineFilter(); });
+    });
+}
+
+/**
+ * Fetch daily expense/income data from the new API endpoint.
+ */
+async function loadTimelineData(from, to) {
+    let url = '/api/expenses/daily';
+    const params = [];
+    if (from) params.push(`from=${from}`);
+    if (to)   params.push(`to=${to}`);
+    if (params.length) url += '?' + params.join('&');
+
+    const data = await api(url, {}, []);
+    renderTimelineChart(Array.isArray(data) ? data : []);
+
+    // Update range label
+    const label = $(` tl-range-label`);  // trim padding
+    const labelEl = $('tl-range-label');
+    if (labelEl) {
+        if (from || to) {
+            labelEl.textContent = `Showing: ${from || '…'} → ${to || 'today'}`;
+        } else {
+            labelEl.textContent = data.length > 0
+                ? `All time  (${data.length} day${data.length !== 1 ? 's' : ''})`
+                : '';
+        }
+    }
+}
+
+/**
+ * Draw / update the timeline chart with the provided daily data.
+ */
+function renderTimelineChart(data) {
+    const canvas     = $('timeline-chart');
+    const noDataEl   = $('tl-no-data');
+    const summaryRow = $('tl-summary-row');
+
+    if (!canvas) return;
+
+    if (!data || data.length === 0) {
+        canvas.style.display = 'none';
+        if (noDataEl)   noDataEl.style.display = 'block';
+        if (summaryRow) summaryRow.innerHTML = '';
+        if (timelineChart) { timelineChart.destroy(); timelineChart = null; }
+        return;
+    }
+
+    canvas.style.display = '';
+    if (noDataEl) noDataEl.style.display = 'none';
+
+    const labels   = data.map(d => {
+        const dt = new Date(d.date + 'T00:00:00');
+        return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    });
+    const expenses = data.map(d => d.expense);
+    const incomes  = data.map(d => d.income);
+    const netTxs   = data.map(d => d.net);
+
+    // ── PREMIUM VISUALS: Gradients ──────────────────────────────────────────
+    const ctx = canvas.getContext('2d');
+    const chartHeight = canvas.offsetHeight || 280;
+    
+    // Bar gradient for Expense
+    const expGrad = ctx.createLinearGradient(0, 0, 0, chartHeight);
+    expGrad.addColorStop(0, 'rgba(244, 63, 94, 0.25)'); // Rose 500
+    expGrad.addColorStop(1, 'rgba(244, 63, 94, 0.02)');
+
+    // Bar gradient for Income
+    const incGrad = ctx.createLinearGradient(0, 0, 0, chartHeight);
+    incGrad.addColorStop(0, 'rgba(6, 182, 212, 0.20)'); // Cyan 500
+    incGrad.addColorStop(1, 'rgba(6, 182, 212, 0.01)');
+
+    // Line gradient for Net
+    const netGrad = ctx.createLinearGradient(0, 0, 0, chartHeight);
+    netGrad.addColorStop(0, 'rgba(99, 102, 241, 0.15)'); // Indigo
+    netGrad.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
+
+    // Mini summary pills
+    const totIncome  = data.reduce((s, d) => s + d.income, 0);
+    const totExpense = data.reduce((s, d) => s + d.expense, 0);
+    const totNet     = totIncome - totExpense;
+    const netColor   = totNet >= 0 ? '#10b981' : '#f43f5e';
+
+    if (summaryRow) {
+        summaryRow.innerHTML = `
+          <div style="background:rgba(6,182,212,0.12);border-radius:10px;padding:6px 14px;display:flex;gap:8px;align-items:center;">
+            <span style="font-size:1.05rem;">📈</span>
+            <span style="font-size:0.75rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Income</span>
+            <span style="font-weight:700;color:#06b6d4;">${fmt(totIncome)}</span>
+          </div>
+          <div style="background:rgba(244,63,94,0.12);border-radius:10px;padding:6px 14px;display:flex;gap:8px;align-items:center;">
+            <span style="font-size:1.05rem;">💸</span>
+            <span style="font-size:0.75rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Expense</span>
+            <span style="font-weight:700;color:#f43f5e;">${fmt(totExpense)}</span>
+          </div>
+          <div style="background:rgba(16,185,129,0.1);border-radius:10px;padding:6px 14px;display:flex;gap:8px;align-items:center;">
+            <span style="font-size:1.05rem;">${totNet >= 0 ? '✅' : '❌'}</span>
+            <span style="font-size:0.75rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Net</span>
+            <span style="font-weight:700;color:${netColor};">${fmt(totNet)}</span>
+          </div>`;
+    }
+
+    if (timelineChart) timelineChart.destroy();
+
+    timelineChart = new Chart(canvas, {
+        type: 'bar', // Grouped bar chart
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'line',
+                    label: 'Daily Net',
+                    data: netTxs,
+                    borderColor: '#6366f1', // Indigo 500
+                    backgroundColor: netGrad,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#6366f1',
+                    pointBorderWidth: 2,
+                    pointRadius: data.length <= 31 ? 4 : 0, // glowing dot
+                    pointHoverRadius: 7,
+                    fill: true,
+                    tension: 0.45,
+                    order: 0, // Draw on top
+                },
+                {
+                    label: 'Income',
+                    data: incomes,
+                    backgroundColor: incGrad,
+                    hoverBackgroundColor: '#06b6d4',
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.8,
+                    order: 1,
+                },
+                {
+                    label: 'Expense',
+                    data: expenses,
+                    backgroundColor: expGrad,
+                    hoverBackgroundColor: '#f43f5e',
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.8,
+                    order: 2,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            // ── ANIMATION: Progressive Drawing ✨ ───────────────────────────────
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart',
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#8b93b8',
+                        font: { family: 'Inter', size: 12 },
+                        boxWidth: 12,
+                        padding: 18,
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.92)',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#94a3b8',
+                    borderColor: 'rgba(99,102,241,0.3)',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        title: items => {
+                            // Show the full date in tooltip title
+                            const idx = items[0].dataIndex;
+                            return data[idx].date;
+                        },
+                        label: ctx => {
+                            const icon = ctx.datasetIndex === 1 ? '📈' : (ctx.datasetIndex === 2 ? '💸' : '🌊');
+                            return ` ${icon} ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+                        },
+                        afterBody: items => {
+                            const idx = items[0].dataIndex;
+                            const net = data[idx].net;
+                            const sign = net >= 0 ? '+' : '';
+                            return [`  Net: ${sign}${fmt(net)}`];
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 11 },
+                        maxRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 14,
+                    },
+                    grid: { display: false },
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 11 },
+                        callback: v => fmtShort(v),
+                    },
+                    grid: { color: 'rgba(148,163,184,0.08)', borderDash: [4, 4] },
+                    border: { display: false },
+                },
+            },
+        },
+    });
+}
+
+/** Apply the user-chosen date range to the timeline chart. */
+async function applyTimelineFilter() {
+    const from = ($('tl-from') || {}).value || '';
+    const to   = ($('tl-to')   || {}).value || '';
+    await loadTimelineData(from, to);
+}
+
+/** Reset date pickers and show all data. */
+async function resetTimelineFilter() {
+    const res = await api('/api/user/created_at', {}, { created_at: '' });
+    const today = new Date().toISOString().slice(0, 10);
+    const fromDate = res.created_at || today;
+    const toDate = today;
+
+    const fromEl = $('tl-from');
+    const toEl   = $('tl-to');
+    if (fromEl) fromEl.value = fromDate;
+    if (toEl)   toEl.value   = toDate;
+    
+    await loadTimelineData(fromDate, toDate);
 }

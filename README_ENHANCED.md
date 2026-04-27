@@ -86,9 +86,11 @@ AI: [Detailed report with spending analysis and recommendations]
 
 ## Documentation
 
-📖 **For Users**: Read [QUICKSTART.md](QUICKSTART.md)
-🔧 **For Developers**: Read [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md)
-✨ **Full Features**: Read [IMPROVEMENTS.md](IMPROVEMENTS.md)
+📖 **For Users**: Read [QUICKSTART.md](QUICKSTART.md)  
+🔧 **For Developers**: Read [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md)  
+✨ **Full Features**: Read [IMPROVEMENTS.md](IMPROVEMENTS.md)  
+📚 **Technical Report**: Read [expense_tracker_report.md](expense_tracker_report.md) - Complete project documentation with LLD, UML, DB design
+
 
 ---
 
