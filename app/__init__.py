@@ -65,9 +65,8 @@ def create_app(config_name="default"):
     from .extensions import db
     db.init_app(app)
     
-    if config_name != "production":
-        from .database import init_db
-        init_db(app)
+    from .database import init_db
+    init_db(app)
 
     # ── Blueprints ────────────────────────────────────────────────────────────
     from .auth import auth
