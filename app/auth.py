@@ -125,9 +125,10 @@ def register():
                 new_user = User(username=username, password=generate_password_hash(password))
                 db.session.add(new_user)
                 db.session.commit()
-            except Exception:
+            except Exception as e:
                 db.session.rollback()
-                error = f"User {username} is already registered."
+                print(f"REGISTER ERROR: {e}")
+                error = f"Database Error: {e}"
             else:
                 return redirect(url_for("auth.login"))
 
