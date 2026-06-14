@@ -65,6 +65,9 @@ def create_app(config_name="default"):
     from .extensions import db
     db.init_app(app)
     
+    # Import models before creating tables!
+    from . import models
+    
     from .database import init_db
     init_db(app)
 
